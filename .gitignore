@@ -1,0 +1,20 @@
+# The memory this tool produces belongs to whoever runs it, never to the repo.
+#
+# This is the line that keeps a fork from publishing its own workspace by
+# accident: changelogs, summaries, plans and reports are generated locally and
+# describe private work. The tool ships; the memory does not.
+memory/
+TRUTH.md
+
+# Local state written by the installer and the health check.
+.cpm-initialized
+.cpm-user.conf
+.cpm-install.conf
+
+# OS / editor
+.DS_Store
+*.swp
+*~
+.idea/
+.vscode/
+node_modules/

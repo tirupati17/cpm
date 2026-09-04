@@ -1,0 +1,31 @@
+name: 'CPM Review Bot'
+description: 'Personalized code review using Claude AI — learns from PR review history per reviewer'
+
+inputs:
+  anthropic_api_key:
+    description: 'Anthropic API key for Claude access'
+    required: true
+  github_token:
+    description: 'GitHub token for PR interaction'
+    required: true
+  platform:
+    description: 'Target platform (ios, android, web, server) — auto-detected from diff if not set'
+    required: false
+    default: 'ios'
+  pr_number:
+    description: 'Pull request number'
+    required: false
+
+outputs:
+  verdict:
+    description: 'Review verdict (APPROVE, CHANGES_REQUESTED, or COMMENT)'
+  score:
+    description: 'Confidence score out of 10'
+  critical_count:
+    description: 'Number of critical issues found'
+  major_count:
+    description: 'Number of major issues found'
+
+runs:
+  using: 'node20'
+  main: 'index.js'

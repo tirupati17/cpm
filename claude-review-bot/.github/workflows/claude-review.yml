@@ -1,0 +1,37 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR diff
+        id: diff
+        run: |
+          git diff origin/${{ github.base_ref }}...HEAD > pr_diff.txt
+          echo "diff_size=$(wc -c < pr_diff.txt)" >> $GITHUB_OUTPUT
+
+      - name: Skip if diff too large
+        if: steps.diff.outputs.diff_size > 100000
+        run: |
+          echo "Diff size ($(steps.diff.outputs.diff_size) bytes) exceeds limit. Skipping review."
+          exit 0
+
+      - name: Claude Code Review
+        uses: ./.github/actions/claude-review
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          platform: ${{ contains(github.repository, 'ios') && 'ios' || 'android' }}
+          pr_number: ${{ github.event.pull_request.number }}
