@@ -49,6 +49,12 @@ curl -fsSL https://raw.githubusercontent.com/tirupati17/cpm-oss/main/install.sh 
 
 Or clone into the workspace that holds your repos and run `./setup.sh`.
 
+**Fork it if you want to keep your memory.** `memory/` and `TRUTH.md` are
+gitignored here so nobody publishes their own workspace by accident. That also
+means a plain clone leaves your memory untracked. If you fork into a **private**
+repo, delete those two lines from `.gitignore` and your memory is versioned and
+backed up like anything else. That is how it is meant to be used day to day.
+
 Then, from the workspace root:
 
 ```bash

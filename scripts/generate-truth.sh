@@ -14,6 +14,18 @@ PROJECTS=("${CPM_PROJECTS[@]}")
 
 LAST_UPDATED=$(date "+%Y-%m-%d %H:%M:%S")
 
+# What this workspace IS. Yours to write, once.
+#
+# Everything else in TRUTH.md is derived from git, but no amount of commit
+# history tells a reader what the workspace is for. Drop a memory/OVERVIEW.md in
+# and it appears here on every regeneration; leave it out and you get a one-line
+# nudge instead of somebody else's project description.
+if [ -f "$WORKSPACE/memory/OVERVIEW.md" ]; then
+  CPM_OVERVIEW="$(cat "$WORKSPACE/memory/OVERVIEW.md")"
+else
+  CPM_OVERVIEW="_Write \`memory/OVERVIEW.md\` to describe this workspace. It appears here verbatim._"
+fi
+
 cat > "$TRUTH" << 'HEADER'
 # Single Source of Truth
 
@@ -27,12 +39,14 @@ cat >> "$TRUTH" << 'SECTION'
 
 ## Project Overview
 
-Emotional intelligence platform by Tirupati Balan (solo indie founder).
-Journaling, mood tracking, AI coaching, mental wellness across iOS, Android, Web, and backend.
+SECTION
 
-**Tech Stack:** SwiftUI (iOS) · Kotlin/Compose (Android) · React/TS (Web) · Vercel Serverless (Backend) · Python/LiveKit (Voice Agent)
-**Services:** Supabase · Firebase/Gemini · Groq · RevenueCat · Amplitude · OneSignal · Telegram Bot
+# Written outside the heredoc on purpose: the block above is quoted so that
+# backticks and $ in the template stay literal, which also means a variable
+# inside it would never expand.
+printf '%s\n\n' "$CPM_OVERVIEW" >> "$TRUTH"
 
+cat >> "$TRUTH" << 'SECTION'
 ## Platform Status
 
 | Platform | Branch | Last Commit | Changelogs |
