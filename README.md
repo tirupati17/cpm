@@ -44,7 +44,7 @@ it, and delete it. There is nothing to log into.
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/tirupati17/cpm/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/tirupati17/cpm-oss/main/install.sh | bash
 ```
 
 Or clone into the workspace that holds your repos and run `./setup.sh`.

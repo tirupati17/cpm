@@ -2,11 +2,11 @@
 # CPM — One-liner installer for Claude Code's Cross-Project Memory toolkit.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/tirupati17/cpm/main/install.sh | bash
-#   curl -fsSL https://raw.githubusercontent.com/tirupati17/cpm/main/install.sh | bash -s -- ~/Code/my-workspace
+#   curl -fsSL https://raw.githubusercontent.com/tirupati17/cpm-oss/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/tirupati17/cpm-oss/main/install.sh | bash -s -- ~/Code/my-workspace
 #
 # What this does:
-#   1. Clones (or forks via gh, if authenticated) tirupati17/cpm into a folder
+#   1. Clones (or forks via gh, if authenticated) tirupati17/cpm-oss into a folder
 #   2. Creates the memory/ tree so you start clean
 #   3. Hands off to setup.sh which prompts for project details + installs hooks
 #
@@ -22,8 +22,8 @@ CYAN='\033[0;36m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-UPSTREAM_URL="https://github.com/tirupati17/cpm.git"
-UPSTREAM_SLUG="tirupati17/cpm"
+UPSTREAM_URL="https://github.com/tirupati17/cpm-oss.git"
+UPSTREAM_SLUG="tirupati17/cpm-oss"
 DEFAULT_DIR_NAME="cpm"
 
 # ----------------------------------------------------------------------------
