@@ -51,7 +51,7 @@ skill, so the next time is one command.
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/tirupati17/cpm-oss/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/tirupati17/cpm/main/install.sh | bash
 ```
 
 Or clone it into the folder that holds your repos and run `./setup.sh`. Then:
