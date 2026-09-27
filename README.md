@@ -22,6 +22,32 @@ where possible) for the toolkit. No server, no database, no account. Everything 
 plain files in your own workspace. Credentials stay in `~/.config/cpm/<project>/`,
 never in a repo.
 
+## How it works
+
+**Memory: every commit becomes something your agent can read.**
+
+```mermaid
+flowchart LR
+    A["git commit<br/>in any repo"] --> B["post-commit hook"]
+    B --> C["changelogs/#lt;project#gt;/<br/>one note per commit"]
+    C --> D["summaries/#lt;project#gt;.md<br/>rebuilt in the background"]
+    D --> E["TRUTH.md<br/>the whole workspace"]
+    E --> F["Your agent reads it<br/>at the start of a session"]
+```
+
+**Toolkit: the agent picks a skill, the skill runs a `cpm` command.**
+
+```mermaid
+flowchart LR
+    T["Task<br/>e.g. ship to Play"] --> S["skills/<br/>loaded only when needed"]
+    S --> K["cpm #lt;service#gt; #lt;command#gt;<br/>dry run by default"]
+    CR["~/.config/cpm/#lt;project#gt;/<br/>credentials"] --> K
+    K -- "--commit" --> P["Play, App Store, RevenueCat,<br/>OneSignal, Amplitude, Ads, GCP"]
+```
+
+And when you work something out by hand, the `cpm-learn` skill turns it into a new
+skill, so the next time is one command.
+
 ## Install
 
 ```bash
