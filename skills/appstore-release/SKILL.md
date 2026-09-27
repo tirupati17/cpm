@@ -32,6 +32,7 @@ cpm appstore release --commit --replace-in-review   # cancel what is in review, 
 cpm appstore release --commit --archive <path>.xcarchive   # reuse an archive (after a timeout)
 cpm appstore release --commit --skip-upload   # already uploaded: wait, attach, submit
 cpm appstore release --commit --no-submit     # stop after attaching; submit by hand
+cpm appstore release --commit --testflight    # archive + upload only: a TestFlight build, even while a version is in review
 ```
 
 Discovered, overridable: `--repo` (git toplevel), `--workspace`/`--xcodeproj`

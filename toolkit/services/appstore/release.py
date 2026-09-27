@@ -6,6 +6,7 @@
     cpm appstore release --commit --replace-in-review
     cpm appstore release --commit --archive /tmp/cpm-appstore/App/App-1.2-40.xcarchive   # reuse an archive
     cpm appstore release --commit --no-submit     # stop after attaching; submit by hand
+    cpm appstore release --commit --testflight    # archive + upload only; lands in TestFlight
 
 Steps, in order:
   1. Version = the app target's MARKETING_VERSION (see `cpm appstore version`).
@@ -235,6 +236,9 @@ def parser():
     p.add_argument('--replace-in-review', action='store_true', help='cancel a version already in review and ship this build')
     p.add_argument('--skip-upload', action='store_true', help='the archive was already uploaded; only wait, attach and submit')
     p.add_argument('--no-submit', action='store_true', help="stop after attaching the build and What's New")
+    p.add_argument('--testflight', action='store_true',
+                   help='archive, upload and wait for processing, then stop: the build is in TestFlight '
+                        'and no App Store version is touched, so a version in review stays in review')
     where = p.add_argument_group('project (discovered when omitted)')
     where.add_argument('--repo', help='repository root (default: git toplevel of the current directory)')
     # Not --project: the cpm dispatcher takes --project as the credentials project.
@@ -272,6 +276,9 @@ def main(argv=None):
     print(f'  {xcode.describe()}')
 
     if not args.commit:
+        if args.testflight:
+            print('\nDRY RUN (TestFlight). Would archive and upload this build; no App Store version is touched.')
+            return
         version_to_ship(asc, app_id, version, args.replace_in_review, commit=False)
         print('\nDRY RUN. Nothing archived, uploaded or submitted. Re-run with --commit.')
         return
@@ -283,6 +290,12 @@ def main(argv=None):
     else:
         upload(xcode, asc, path)
     build_id = wait_for_build(asc, app_id, version, build)
+    if args.testflight:
+        # Everything processed is in TestFlight already. Stopping before
+        # version_to_ship is the point: a version waiting for review is not
+        # an obstacle to a test build, and must not be cancelled for one.
+        print(f'build {build} is processed and in TestFlight. No App Store version was touched.')
+        return
 
     target = version_to_ship(asc, app_id, version, args.replace_in_review, commit=True)
     print(f'attaching build {build} to version {version}')
