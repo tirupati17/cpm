@@ -154,7 +154,7 @@ $p"
   done
 
   echo "$all_files" | sort | uniq -c | sort -rn | head -15 | while read count filepath; do
-    [ -n "$filepath" ] && echo "- \`$filepath\` ($count commits)" >> "$out"
+    if [ -n "$filepath" ]; then echo "- \`$filepath\` ($count commits)" >> "$out"; fi
   done
   echo "" >> "$out"
 
