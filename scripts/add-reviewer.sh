@@ -7,7 +7,7 @@
 # What it does:
 #   1. Creates the learnings JSON file (empty patterns, ready to fill)
 #   2. Harvests patterns from PRs (if --pr provided, requires GITHUB_TOKEN)
-#   3. Updates CLAUDE.md reviewer table
+#   3. Updates the reviewer table in AGENTS.md (or CLAUDE.md)
 #   4. Runs test to verify
 
 set -euo pipefail
@@ -124,7 +124,8 @@ if [ ${#PRS[@]} -gt 0 ]; then
   fi
 fi
 
-CLAUDE_MD="$WORKSPACE/CLAUDE.md"
+CLAUDE_MD="$WORKSPACE/AGENTS.md"
+[ -f "$CLAUDE_MD" ] || CLAUDE_MD="$WORKSPACE/CLAUDE.md"
 
 if [ -f "$CLAUDE_MD" ]; then
   pattern_count=$(grep -c '"id"' "$FILEPATH" 2>/dev/null || true)
@@ -143,15 +144,15 @@ if [ -f "$CLAUDE_MD" ]; then
   new_row="| ${platform_capitalized} | ${name_capitalized} | \`${FILENAME}\` | ${pattern_count} patterns (${severity_breakdown}) |"
 
   if grep -q "$FILENAME" "$CLAUDE_MD" 2>/dev/null; then
-    echo "Reviewer already in CLAUDE.md table. Updating pattern count..."
-    sed -i '' "s|.*${FILENAME}.*|${new_row}|" "$CLAUDE_MD"
+    echo "Reviewer already in $(basename "$CLAUDE_MD") table. Updating pattern count..."
+    sed "s|.*${FILENAME}.*|${new_row}|" "$CLAUDE_MD" > "$CLAUDE_MD.tmp" && mv "$CLAUDE_MD.tmp" "$CLAUDE_MD"
   else
     if grep -q "To add a reviewer" "$CLAUDE_MD" 2>/dev/null; then
       line_num=$(grep -n "To add a reviewer" "$CLAUDE_MD" | head -1 | cut -d: -f1)
       { head -n "$((line_num - 1))" "$CLAUDE_MD"; echo "$new_row"; tail -n +"$line_num" "$CLAUDE_MD"; } > "$CLAUDE_MD.tmp" && mv "$CLAUDE_MD.tmp" "$CLAUDE_MD"
-      echo "Added reviewer to CLAUDE.md table."
+      echo "Added reviewer to $(basename "$CLAUDE_MD") table."
     else
-      echo "WARN: Could not find reviewer table in CLAUDE.md. Add manually:"
+      echo "WARN: Could not find reviewer table in $(basename "$CLAUDE_MD"). Add manually:"
       echo "  $new_row"
     fi
   fi
@@ -172,7 +173,7 @@ if [ "$pattern_count" -eq 0 ]; then
   echo "     node claude-review-bot/scripts/harvest-pr-comments.js \\"
   echo "       --repo your-org/your-${PLATFORM}-repo --pr NUMBER --reviewer $GITHUB"
   echo ""
-  echo "  2. Ask Claude Code:"
+  echo "  2. Ask your coding agent:"
   echo "     \"Harvest review patterns from PR #1234 for $NAME\""
   echo ""
 fi

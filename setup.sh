@@ -30,24 +30,38 @@ prompt_with_default() {
 echo ""
 echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${BOLD}  CPM Setup Wizard${NC}"
-echo -e "${BOLD}  Cross-Project Memory for Claude Code${NC}"
+echo -e "${BOLD}  Cross-Project Memory for any coding agent${NC}"
 echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 
-# Fresh-fork bootstrap — if there's no root CLAUDE.md but a template exists,
-# offer to generate one from it with the forker's project name substituted in.
-# Existing instances skip this and keep their content untouched.
-if [ ! -f "$WORKSPACE/CLAUDE.md" ] && [ -f "$WORKSPACE/templates/CLAUDE.md" ]; then
-  echo -e "${CYAN}Looks like a fresh fork — let's bootstrap your CLAUDE.md.${NC}"
+# Fresh-fork bootstrap: if the workspace has no agent instructions yet, write
+# AGENTS.md from the template with the project name filled in. AGENTS.md is
+# the file most coding agents read (Codex, Cursor, GitHub Copilot and others).
+# An existing AGENTS.md or CLAUDE.md is never touched.
+if [ ! -f "$WORKSPACE/AGENTS.md" ] && [ ! -f "$WORKSPACE/CLAUDE.md" ] && [ -f "$WORKSPACE/templates/AGENTS.md" ]; then
+  echo -e "${CYAN}Looks like a fresh fork. Let's write your AGENTS.md.${NC}"
   echo ""
   _proj_name=$(prompt_with_default "Project name" "My Project")
   _proj_one_liner=$(prompt_with_default "One-line description" "Cross-project codebase.")
   sed -e "s|{{PROJECT_NAME}}|${_proj_name}|g" \
       -e "s|{{ONE_LINE_DESCRIPTION}}|${_proj_one_liner}|g" \
-      "$WORKSPACE/templates/CLAUDE.md" > "$WORKSPACE/CLAUDE.md"
+      "$WORKSPACE/templates/AGENTS.md" > "$WORKSPACE/AGENTS.md"
   echo ""
-  echo -e "  ${GREEN}✓${NC} Created CLAUDE.md from templates/CLAUDE.md"
+  echo -e "  ${GREEN}✓${NC} Created AGENTS.md from templates/AGENTS.md"
   echo -e "  ${DIM}Edit it later to fill in the Platform Repos table for your sub-repos.${NC}"
+  echo ""
+fi
+
+# Agents that read their own file name get a one-line pointer to AGENTS.md,
+# so every agent follows the same instructions. Both Claude Code (CLAUDE.md)
+# and Gemini CLI (GEMINI.md) expand an @file line into that file's contents.
+if [ -f "$WORKSPACE/AGENTS.md" ]; then
+  for _pointer in CLAUDE.md GEMINI.md; do
+    if [ ! -e "$WORKSPACE/$_pointer" ]; then
+      printf '%s\n' "@AGENTS.md" > "$WORKSPACE/$_pointer"
+      echo -e "  ${GREEN}✓${NC} Created $_pointer pointing at AGENTS.md"
+    fi
+  done
   echo ""
 fi
 
@@ -205,8 +219,8 @@ else
 fi
 
 "$WORKSPACE/scripts/link-skills.sh" >/dev/null 2>&1
-skill_count=$(find "$WORKSPACE/.claude/skills" -mindepth 1 -maxdepth 1 -type l 2>/dev/null | wc -l | tr -d ' ')
-echo -e "    ${GREEN}+${NC} $skill_count skills linked into .claude/skills/"
+skill_count=$(grep -c '^- \*\*' "$WORKSPACE/skills/INDEX.md" 2>/dev/null || true)
+echo -e "    ${GREEN}+${NC} ${skill_count:-0} skills listed in skills/INDEX.md and linked for agents"
 
 for repo in "${CPM_PROJECTS[@]}"; do
   count=$(find "$WORKSPACE/memory/changelogs/$repo" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
@@ -224,10 +238,11 @@ echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 echo "  What happens now:"
 echo ""
-echo "  1. Open this directory in Claude Code:"
-echo -e "     ${DIM}cd $WORKSPACE && claude${NC}"
+echo "  1. Open this directory in your coding agent (Claude Code, Codex, Cursor,"
+echo "     Gemini CLI, GitHub Copilot, Aider...):"
+echo -e "     ${DIM}cd $WORKSPACE${NC}"
 echo ""
-echo "  2. Claude auto-reads TRUTH.md + CLAUDE.md = full project context"
+echo "  2. The agent reads AGENTS.md, which points it at TRUTH.md = full project context"
 echo ""
 echo "  3. Every commit auto-logs to memory/changelogs/"
 echo ""

@@ -102,7 +102,7 @@ for project in "${CPM_PROJECTS[@]}"; do
   total_changelogs=$((total_changelogs + c))
 done
 
-# Skills: link any new ones into .claude/skills/ so the agent can load them.
+# Skills: refresh skills/INDEX.md and link new ones for agents that load skills.
 "$WORKSPACE/scripts/link-skills.sh" >/dev/null 2>&1
 skills=$(find "$WORKSPACE/skills" -mindepth 2 -maxdepth 2 -name SKILL.md -not -path '*/_*' 2>/dev/null | wc -l | tr -d ' ')
 
@@ -114,8 +114,8 @@ fi
 
 # Context memory estimation
 ctx_bytes=0
-for f in "$WORKSPACE/CLAUDE.md" "$WORKSPACE/TRUTH.md"; do
-  [ -f "$f" ] && ctx_bytes=$((ctx_bytes + $(file_size "$f")))
+for f in "$WORKSPACE/AGENTS.md" "$WORKSPACE/CLAUDE.md" "$WORKSPACE/TRUTH.md"; do
+  [ -f "$f" ] && [ ! -L "$f" ] && [ "$(head -c 11 "$f")" != "@AGENTS.md" ] && ctx_bytes=$((ctx_bytes + $(file_size "$f")))
 done
 _workspace_slug=$(echo "$WORKSPACE" | sed 's|^/||; s|/|-|g')
 _memory_dir="$HOME/.claude/projects/-${_workspace_slug}/memory"
@@ -140,7 +140,7 @@ if [ "$IS_FIRST_RUN" = true ]; then
   echo -e "  ${CYAN}Two layers:${NC}"
   echo -e "  ${GREEN}Infrastructure${NC}  Git hooks + bash scripts (zero deps)"
   echo "                  Auto-logs commits, regenerates summaries, syncs state"
-  echo -e "  ${GREEN}Intelligence${NC}    Claude Code + Review Bot + shared memory"
+  echo -e "  ${GREEN}Intelligence${NC}    Your coding agent + Review Bot + shared memory"
   echo "                  Reads TRUTH.md for instant context, audits PRs"
   echo ""
   echo -e "  ${CYAN}Auto-setup complete:${NC}"

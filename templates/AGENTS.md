@@ -14,7 +14,7 @@
 
 State the real outcome that fulfills the ask, separated from the wording or the first interpretation.
 
-- Read the context that already exists: `TRUTH.md`, `memory/summaries/<relevant project>.md`, the recent changelogs in `memory/changelogs/<project>/`, the platform's own `CLAUDE.md`, and `MEMORY.md`.
+- Read the context that already exists: `TRUTH.md`, `memory/summaries/<relevant project>.md`, the recent changelogs in `memory/changelogs/<project>/`, the platform's own `AGENTS.md`, and any memory file your agent keeps.
 - Look at the actual code referenced before assuming what it does.
 - Restate the truth in **one sentence** before moving on. If you cannot state it crisply, you don't have it yet — ask.
 
@@ -24,7 +24,7 @@ Reuse before inventing. Almost every new requirement maps onto managers / servic
 
 - Search the relevant repo for `.shared` singletons, helpers, components, deep links, hooks, etc.
 - Produce a **reuse map**: *"I'll wire <new piece> through <existing piece A> + <existing piece B>."*
-- Note constraints from the platform CLAUDE.md (feature flags, platform-specific gotchas, etc.).
+- Note constraints from the platform AGENTS.md (feature flags, platform-specific gotchas, etc.).
 
 ### 3. Next Steps — ask, process, verify
 
@@ -78,7 +78,7 @@ setup.sh               ← Interactive setup wizard (run once on a fresh clone)
 
 ### Session Start
 
-**On every new Claude Code session, run `./scripts/cpm-check.sh` first** — it auto-installs missing hooks, backfills empty changelog dirs, refreshes stale TRUTH.md, and gives a one-line health summary.
+**At the start of every agent session, run `./scripts/cpm-check.sh` first** — it auto-installs missing hooks, backfills empty changelog dirs, refreshes stale TRUTH.md, and gives a one-line health summary.
 
 Then read in order:
 1. `TRUTH.md` — complete project state at a glance
@@ -94,19 +94,25 @@ After committing in any sub-project, everything happens automatically via the po
 
 No manual steps. To force-refresh: `./scripts/summarize.sh && ./scripts/generate-truth.sh`.
 
+### Skills and the toolkit
+
+For store, billing, push, analytics, ads or cloud work, read `skills/INDEX.md`,
+open the `SKILL.md` that matches the task, and run what it says through
+`toolkit/bin/cpm`. Every write is a dry run until `--commit`.
+
 ---
 
-## Platform-Specific CLAUDE.md
+## Platform-Specific AGENTS.md
 
-Each repo can have its own `CLAUDE.md` with platform-specific conventions. The shared one (this file) is for cross-cutting context.
+Each repo can have its own `AGENTS.md` with platform-specific conventions. The shared one (this file) is for cross-cutting context.
 
-**Always read the platform-specific CLAUDE.md when working in that repo.**
+**Always read the platform-specific AGENTS.md when working in that repo.**
 
 ---
 
 ## Working Directory Context
 
 When launched from the workspace root, you have access to all repos. When working on a specific platform:
-1. Read that repo's `CLAUDE.md` first
+1. Read that repo's `AGENTS.md` first
 2. Run git commands from within that repo's directory
 3. Never cross-commit files between repos

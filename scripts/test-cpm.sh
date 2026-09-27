@@ -211,14 +211,18 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
-section "10. CLAUDE.md"
+section "10. Agent instructions (AGENTS.md or CLAUDE.md)"
 # ──────────────────────────────────────────────────────────────
 
-if [ -f "$WORKSPACE/CLAUDE.md" ] && [ -s "$WORKSPACE/CLAUDE.md" ]; then
-  pass "CLAUDE.md exists"
-  grep -qi "cpm\|cross-project memory" "$WORKSPACE/CLAUDE.md" && pass "CLAUDE.md mentions CPM" || fail "CLAUDE.md missing CPM section"
+_instr=""
+for _f in AGENTS.md CLAUDE.md; do
+  if [ -s "$WORKSPACE/$_f" ] && [ "$(head -c 11 "$WORKSPACE/$_f")" != "@AGENTS.md" ]; then _instr="$_f"; break; fi
+done
+if [ -n "$_instr" ]; then
+  pass "$_instr exists"
+  grep -qi "cpm\|cross-project memory" "$WORKSPACE/$_instr" && pass "$_instr mentions CPM" || fail "$_instr missing CPM section"
 else
-  fail "CLAUDE.md missing"
+  fail "AGENTS.md missing (run ./setup.sh)"
 fi
 
 # ──────────────────────────────────────────────────────────────
