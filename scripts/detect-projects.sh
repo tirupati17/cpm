@@ -20,7 +20,7 @@ fi
 CPM_PROJECTS=()
 
 # Dirs to skip even if they happen to contain .git
-_CPM_SKIP="scripts docs claude-review-bot memory .claude"
+_CPM_SKIP="scripts docs claude-review-bot memory .claude .agents"
 
 for dir in "$WORKSPACE"/*/; do
   [ -d "$dir" ] || continue

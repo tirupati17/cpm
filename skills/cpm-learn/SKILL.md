@@ -44,5 +44,5 @@ customer ids, key ids, prices, people. Those belong in credentials or memory.
 
 ## 4. Link it
 
-Run `scripts/cpm-check.sh` (it links new skills into `.claude/skills/`), and
+Run `scripts/cpm-check.sh` (it adds new skills to `skills/INDEX.md` and links them for agents), and
 mention the new skill in the commit message so the changelog records it.

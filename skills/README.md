@@ -1,10 +1,11 @@
 # Skills
 
 A skill is a folder with a `SKILL.md`: when to use it, what it needs, the
-commands, and the traps somebody already paid for. Coding agents that support
-skills (Claude Code reads `.claude/skills/<name>/SKILL.md`) load one only when
-its `description` matches the task, so a hundred skills cost nothing until one
-is needed. That is how CPM learns on demand.
+commands, and the traps somebody already paid for. Agents with native skill
+support load one only when its `description` matches the task, so a hundred
+skills cost nothing until one is needed. Agents without it read
+`skills/INDEX.md` (one line per skill) and open the one they need. Either way
+it works with any coding agent, and that is how CPM learns on demand.
 
 ```
 skills/
@@ -19,9 +20,11 @@ skills/
   gcp/                projects, APIs, service accounts
 ```
 
-`setup.sh` and `cpm-check.sh` link every folder here into
-`<workspace>/.claude/skills/`, so skills added to a fork show up in the next
-session without any other step.
+`setup.sh` and `cpm-check.sh` run `scripts/link-skills.sh`, which rewrites
+`skills/INDEX.md` and links every folder here into `.claude/skills/` (Claude
+Code) and `.agents/skills/` (the shared folder other agents read). Set
+`CPM_SKILL_DIRS` to link somewhere else. Skills added to a fork show up in the
+next session without any other step.
 
 ## The rule
 

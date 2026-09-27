@@ -22,6 +22,7 @@ __pycache__/
 
 # Skill links are rebuilt from skills/ by setup.sh and cpm-check.sh.
 .claude/skills/
+.agents/skills/
 
 # Credentials never live in the workspace; the toolkit keeps them in
 # ~/.config/cpm/<project>/. These catch the usual accidents anyway.
