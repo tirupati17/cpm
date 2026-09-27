@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CPM — One-liner installer for Claude Code's Cross-Project Memory toolkit.
+# CPM — One-liner installer for Cross-Project Memory, for any coding agent.
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/tirupati17/cpm/main/install.sh | bash
@@ -36,7 +36,7 @@ fi
 
 echo ""
 echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BOLD}  CPM — Cross-Project Memory for Claude Code${NC}"
+echo -e "${BOLD}  CPM — Cross-Project Memory for any coding agent${NC}"
 echo -e "${DIM}  One-liner installer${NC}"
 echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""

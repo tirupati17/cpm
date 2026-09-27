@@ -42,7 +42,7 @@ if [ -z "${SLACK_BOT_TOKEN:-}" ]; then
   echo "  1. export SLACK_BOT_TOKEN='xoxb-your-token'"
   echo "  2. ./scripts/postreport.sh --channel C0XXXXX"
   echo ""
-  echo "Or use Claude Code's Slack MCP to post directly."
+  echo "Or have your coding agent post it through its Slack integration."
   exit 0
 fi
 

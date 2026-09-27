@@ -13,7 +13,8 @@ billing and push services a mobile app runs on.
   OneSignal, Amplitude, Google Ads and Google Cloud. Every write is a dry run until
   you add `--commit`.
 - **Skills.** Short guides the agent loads only when a task needs them, one per
-  service.
+  service. Works with Claude Code, Codex, Cursor, Gemini CLI, GitHub Copilot or
+  any other coding agent.
 
 ## How it is made
 
@@ -62,12 +63,35 @@ Or clone it into the folder that holds your repos and run `./setup.sh`. Then:
 ./scripts/cpm-check.sh        # health check and a short briefing
 ```
 
-Add this to your agent's instructions (`CLAUDE.md`, `AGENTS.md`, and so on):
+## Works with any coding agent
+
+CPM only writes files and runs shell commands, so it doesn't depend on any one
+agent. `setup.sh` writes the instructions to `AGENTS.md`, the file most agents
+already read, and points the others at it:
+
+| Agent | Reads instructions from | Skills |
+|---|---|---|
+| Codex, Cursor, GitHub Copilot, and others that read `AGENTS.md` | `AGENTS.md` | `.agents/skills/` or `skills/INDEX.md` |
+| Claude Code | `CLAUDE.md`, a one-line `@AGENTS.md` pointer | `.claude/skills/` |
+| Gemini CLI | `GEMINI.md`, a one-line `@AGENTS.md` pointer | `skills/INDEX.md` |
+| Aider | `aider --read AGENTS.md` | `skills/INDEX.md` |
+| Anything else | tell it to read `AGENTS.md` | `skills/INDEX.md` |
+
+`skills/INDEX.md` lists every skill in one line with when to use it, so an agent
+without skill support can still find and open the right `SKILL.md`. To link skills
+into another folder, set `CPM_SKILL_DIRS` (for example
+`CPM_SKILL_DIRS=".agents/skills .my-agent/skills"`).
+
+Already have your own instructions file? Add this to it:
 
 ```markdown
 At the start of every session, run ./scripts/cpm-check.sh, then read TRUTH.md
-and memory/summaries/<project>.md.
+and memory/summaries/<project>.md. For store, billing, push, ads or cloud work,
+read skills/INDEX.md and follow the matching SKILL.md.
 ```
+
+The optional review bot in `claude-review-bot/` is the one part tied to a
+single provider: it is a GitHub Action that calls the Claude API.
 
 More detail: [`toolkit/README.md`](toolkit/README.md), [`skills/README.md`](skills/README.md).
 
