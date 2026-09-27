@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+"""cpm: run a toolkit helper.
+
+    cpm                                  list every service and command
+    cpm <service>                        list that service's commands
+    cpm <service> <command> [args...]    run toolkit/services/<service>/<command>.py
+    cpm creds ...                        manage credentials (see `cpm creds -h`)
+
+Helpers ask for the credentials they need the first time and keep them in
+~/.config/cpm/<project>/, outside every repo. --project <name> (or CPM_PROJECT)
+picks whose credentials to use; it is read here and passed on in the environment.
+"""
+import os
+import sys
+from pathlib import Path
+
+TOOLKIT = Path(__file__).resolve().parents[1]
+SERVICES = TOOLKIT / 'services'
+sys.path.insert(0, str(TOOLKIT / 'lib'))
+
+
+def summary(script):
+    for line in script.read_text(encoding='utf-8').splitlines()[1:12]:
+        line = line.strip().strip('"\'')
+        if line and not line.startswith(('#', 'import', 'from')):
+            return line
+    return ''
+
+
+def commands(service):
+    return sorted(p for p in (SERVICES / service).glob('*.py')
+                  if not p.name.startswith('_') and p.stem != 'lib')
+
+
+def listing(only=None):
+    for service in sorted(p.name for p in SERVICES.iterdir() if p.is_dir() and not p.name.startswith('_')):
+        if only and service != only:
+            continue
+        print(service)
+        for script in commands(service):
+            print(f'  {script.stem:<22} {summary(script)}')
+    if not only:
+        print('creds\n  list | setup | set | unset | import-env | exec | where')
+
+
+def main(argv):
+    for i, arg in enumerate(argv):
+        if arg.startswith('--project='):
+            argv[i:i + 1] = ['--project', arg.split('=', 1)[1]]
+            break
+    if '--project' in argv:
+        at = argv.index('--project')
+        if at + 1 >= len(argv):
+            raise SystemExit('--project needs a name')
+        os.environ['CPM_PROJECT'] = argv[at + 1]
+        del argv[at:at + 2]
+    if not argv or argv[0] in ('-h', '--help', 'help', 'list'):
+        print(__doc__)
+        listing()
+        return 0
+    if argv[0] == 'creds':
+        from cpmkit import cli
+        return cli.main(argv[1:])
+    service = argv[0]
+    if not (SERVICES / service).is_dir():
+        raise SystemExit(f'No service {service!r}. Run `cpm` to list them.')
+    if len(argv) == 1:
+        listing(service)
+        return 0
+    script = SERVICES / service / f'{argv[1]}.py'
+    if not script.is_file():
+        listing(service)
+        raise SystemExit(f'\nNo command {argv[1]!r} in {service}.')
+    env = dict(os.environ)
+    env['PYTHONPATH'] = os.pathsep.join(filter(None, [str(TOOLKIT / 'lib'), env.get('PYTHONPATH')]))
+    os.execvpe(sys.executable, [sys.executable, str(script), *argv[2:]], env)
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
