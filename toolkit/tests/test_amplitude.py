@@ -49,6 +49,47 @@ class AmplitudeTest(ApiCase):
         self.assertEqual(code, 0)
         self.assertEqual(self.http.by('PATCH')[0]['body'], {'enabled': False})
 
+    def test_target_adds_segment_and_enables_zero_rollout_flag(self):
+        flags = {'flags': [{'id': 21, 'key': 'hotword', 'enabled': False, 'rolloutPercentage': 0,
+                            'deployments': [1], 'variants': [{'key': 'on'}]}]}
+        self.route(('GET', '/api/1/flags', 200, flags), ('PATCH', '/api/1/flags/21', 200, {}))
+        code, out, _ = self.run_cmd('amplitude', 'target', ['hotword', '--property', 'beta_tester'])
+        self.assertEqual(code, 0)
+        self.assertIn('DRY RUN', out)
+        self.assertEqual(self.http.by('PATCH'), [])
+        code, _, _ = self.run_cmd('amplitude', 'target', ['hotword', '--property', 'beta_tester', '--commit'])
+        body = self.http.by('PATCH')[0]['body']
+        self.assertTrue(body['enabled'])
+        seg = body['targetSegments'][0]
+        self.assertEqual(seg['name'], 'beta_tester = true')
+        self.assertEqual(seg['conditions'][0]['prop'], 'gp:beta_tester')
+        self.assertEqual(seg['conditions'][0]['values'], ['true'])
+        self.assertEqual(seg['rolloutWeights'], {'on': 1})
+
+    def test_target_refuses_to_enable_flag_with_base_rollout(self):
+        flags = {'flags': [{'id': 22, 'key': 'half', 'enabled': False, 'rolloutPercentage': 50,
+                            'deployments': [1], 'variants': [{'key': 'on'}]}]}
+        self.route(('GET', '/api/1/flags', 200, flags))
+        code, _, err = self.run_cmd('amplitude', 'target', ['half', '--property', 'beta_tester', '--commit'])
+        self.assertEqual(code, 1)
+        self.assertIn('50% of everyone', err)
+        self.assertEqual(self.http.by('PATCH'), [])
+
+    def test_target_rerun_replaces_and_remove_keeps_others(self):
+        other = {'name': 'staff', 'conditions': [{'prop': 'gp:staff', 'op': 'is', 'values': ['true']}]}
+        mine = {'name': 'beta_tester = true', 'conditions': [{'prop': 'gp:beta_tester', 'op': 'is', 'values': ['true']}]}
+        flags = {'flags': [{'id': 23, 'key': 'mcp', 'enabled': True, 'rolloutPercentage': 0, 'deployments': [1],
+                            'variants': [{'key': 'on'}], 'targetSegments': [other, mine]}]}
+        self.route(('GET', '/api/1/flags', 200, flags), ('PATCH', '/api/1/flags/23', 200, {}))
+        self.run_cmd('amplitude', 'target', ['mcp', '--property', 'beta_tester', '--commit'])
+        names = [s['name'] for s in self.http.by('PATCH')[0]['body']['targetSegments']]
+        self.assertEqual(names, ['staff', 'beta_tester = true'])
+        self.assertNotIn('enabled', self.http.by('PATCH')[0]['body'])
+        self.run_cmd('amplitude', 'target', ['mcp', '--property', 'beta_tester', '--remove', '--commit'])
+        self.assertEqual(self.http.by('PATCH')[1]['body'], {'targetSegments': [other]})
+        code, out, _ = self.run_cmd('amplitude', 'target', ['--property', 'beta_tester'])
+        self.assertIn('mcp', out)
+
     def test_flag_missing_and_already_set(self):
         self.route(('GET', '/api/1/flags', 200, FLAGS))
         code, _, err = self.run_cmd('amplitude', 'flag', ['paywall', '--on'])

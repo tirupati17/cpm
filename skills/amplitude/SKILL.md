@@ -22,6 +22,8 @@ description: Use when listing or checking Amplitude Experiment feature flags, tu
 cpm amplitude flags [--grep text] [--all]      # key, ON/off, rollout, variants, segments, deployments
 cpm amplitude flag <key> --off                 # dry run: current state and the PATCH
 cpm amplitude flag <key> --on --commit         # changes `enabled` only
+cpm amplitude target <key> --property beta_tester [--value true] [--remove] [--commit]
+cpm amplitude target --property beta_tester    # which flags carry that segment
 cpm amplitude events                           # event types with this week's totals
 cpm amplitude events --event app_opened --days 30 [--metric uniques] [--daily]
 ```
@@ -30,7 +32,19 @@ cpm amplitude events --event app_opened --days 30 [--metric uniques] [--daily]
 and creating flags stays in the UI. It looks the key up to find the numeric id,
 then patches `/api/1/flags/<id>`.
 
+`target` gives one group a feature first: it adds a segment
+`gp:<property> is <value> -> on` in front of the base rollout, named after the
+property so a rerun replaces it. If the flag is off at 0% it switches it on
+(nobody else is affected); if it is off with a base rollout above 0% it refuses,
+because switching it on would release to that share of everyone.
+
 ## Traps
+
+- **A targeting property has to be in the fetch.** Remote evaluation matches on
+  the user properties sent with the Experiment fetch; the Analytics profile
+  lags ingestion, so an app that only calls identify can miss its own segment
+  for its first sessions. Put the property on the Experiment user and refetch
+  when it changes.
 
 - **A gate with no flag in the dashboard is not off, it is the code's
   fallback.** If the fallback is `true` the feature is live for everyone with no
