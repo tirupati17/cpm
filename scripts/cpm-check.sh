@@ -102,6 +102,10 @@ for project in "${CPM_PROJECTS[@]}"; do
   total_changelogs=$((total_changelogs + c))
 done
 
+# Skills: link any new ones into .claude/skills/ so the agent can load them.
+"$WORKSPACE/scripts/link-skills.sh" >/dev/null 2>&1
+skills=$(find "$WORKSPACE/skills" -mindepth 2 -maxdepth 2 -name SKILL.md -not -path '*/_*' 2>/dev/null | wc -l | tr -d ' ')
+
 learnings=0
 learnings_dir="$WORKSPACE/claude-review-bot/.github/actions/claude-review/learnings"
 if [ -d "$learnings_dir" ]; then
@@ -153,7 +157,7 @@ if [ "$IS_FIRST_RUN" = true ]; then
   echo "    ./scripts/add-reviewer.sh         Onboard a reviewer"
   echo "    ./scripts/postreport.sh           Post report to Slack"
   echo ""
-  echo -e "  ${DIM}${#CPM_PROJECTS[@]} repos | ${total_changelogs} changelogs | ${learnings} reviewers | ~${ctx_k}K/200K context${NC}"
+  echo -e "  ${DIM}${#CPM_PROJECTS[@]} repos | ${total_changelogs} changelogs | ${learnings} reviewers | ${skills} skills | ~${ctx_k}K/200K context${NC}"
   echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
   echo ""
 
@@ -215,7 +219,7 @@ if [ "$IS_NEW_DAY" = true ]; then
   fi
 
   echo ""
-  echo -e "  ${DIM}${#CPM_PROJECTS[@]} repos | ${total_changelogs} changelogs | ${learnings} reviewers | ~${ctx_k}K/200K context${NC}"
+  echo -e "  ${DIM}${#CPM_PROJECTS[@]} repos | ${total_changelogs} changelogs | ${learnings} reviewers | ${skills} skills | ~${ctx_k}K/200K context${NC}"
 
   if [ "$ACTIONS" -gt 0 ]; then
     echo -e "  ${DIM}Auto-fixed $ACTIONS issue(s) this session${NC}"
@@ -231,7 +235,7 @@ fi
 # ══════════════════════════════════════════════════════════════
 # SAME DAY — One-line status
 # ══════════════════════════════════════════════════════════════
-status="${#CPM_PROJECTS[@]} repos, ${total_changelogs} changelogs, ${learnings} reviewers, ~${ctx_k}K/200K context"
+status="${#CPM_PROJECTS[@]} repos, ${total_changelogs} changelogs, ${learnings} reviewers, ${skills} skills, ~${ctx_k}K/200K context"
 
 if [ "$ACTIONS" -gt 0 ]; then
   echo -e "CPM: Auto-fixed $ACTIONS issue(s). $status"

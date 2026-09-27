@@ -18,3 +18,16 @@ TRUTH.md
 .idea/
 .vscode/
 node_modules/
+__pycache__/
+
+# Skill links are rebuilt from skills/ by setup.sh and cpm-check.sh.
+.claude/skills/
+
+# Credentials never live in the workspace; the toolkit keeps them in
+# ~/.config/cpm/<project>/. These catch the usual accidents anyway.
+keys/
+*.p8
+*service-account*.json
+credentials.env
+.env
+.env.*

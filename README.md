@@ -76,6 +76,31 @@ Then, from the workspace root:
 | `add-reviewer.sh` | Onboard a code reviewer whose patterns the review bot enforces |
 | `test-cpm.sh` | Diagnostics |
 
+## Toolkit and skills: the services your apps live on
+
+Memory covers what happened in your repos. Shipping an app also means Google
+Play, App Store Connect, RevenueCat, OneSignal, Amplitude, Google Ads and
+Google Cloud, and each has an API that somebody works out once and then forgets.
+
+```bash
+toolkit/bin/cpm                                  # every helper
+toolkit/bin/cpm play publish production          # dry run; --commit to ship
+toolkit/bin/cpm appstore release                 # archive, upload, attach, submit (dry run)
+toolkit/bin/cpm revenuecat customer <user-id>
+toolkit/bin/cpm googleads campaigns --days 7
+```
+
+- **Credentials are asked for once per project** and kept in
+  `~/.config/cpm/<project>/` (0700, files 0600), never in a repo, so a fork is
+  always safe to publish. The environment wins, so CI needs no files.
+- **Every write is a dry run** until `--commit`, and reads the result back.
+- **Skills** in `skills/` are linked into `.claude/skills/`, so the agent loads
+  the one it needs, when it needs it. After doing something new by hand, the
+  `cpm-learn` skill turns it into a skill (and a command, if it repeats), and the
+  next project starts from there.
+
+Details: [`toolkit/README.md`](toolkit/README.md), [`skills/README.md`](skills/README.md).
+
 ## Telling your agent to use it
 
 Add this to `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, or whatever your tool
@@ -116,7 +141,11 @@ you will uninstall.
 ## Requirements
 
 Bash, git, and standard POSIX tools. Tested on macOS. `postreport.sh` needs a
-Slack token if you want it; nothing else needs credentials.
+Slack token if you want it; the memory needs no credentials.
+
+The toolkit needs Python 3.9+. Most commands use only the standard library;
+Play needs `google-api-python-client google-auth`, App Store needs
+`pyjwt cryptography`, and each says so when it is missing.
 
 ## Optional: the review bot
 

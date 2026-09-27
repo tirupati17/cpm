@@ -204,6 +204,10 @@ else
   VERIFY_PASS=false
 fi
 
+"$WORKSPACE/scripts/link-skills.sh" >/dev/null 2>&1
+skill_count=$(find "$WORKSPACE/.claude/skills" -mindepth 1 -maxdepth 1 -type l 2>/dev/null | wc -l | tr -d ' ')
+echo -e "    ${GREEN}+${NC} $skill_count skills linked into .claude/skills/"
+
 for repo in "${CPM_PROJECTS[@]}"; do
   count=$(find "$WORKSPACE/memory/changelogs/$repo" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
   if [ "$count" -gt 0 ]; then
@@ -226,6 +230,11 @@ echo ""
 echo "  2. Claude auto-reads TRUTH.md + CLAUDE.md = full project context"
 echo ""
 echo "  3. Every commit auto-logs to memory/changelogs/"
+echo ""
+echo "  4. Store, billing, ads and push helpers ask for credentials on first use"
+echo "     and keep them in ~/.config/cpm/<project>/, never in a repo:"
+echo -e "     ${DIM}toolkit/bin/cpm${NC}                 list every helper"
+echo -e "     ${DIM}toolkit/bin/cpm creds setup play${NC} answer the questions once"
 echo ""
 echo "  Useful commands:"
 echo -e "    ${DIM}cpmcheck${NC}       — Health check (run every session)"
