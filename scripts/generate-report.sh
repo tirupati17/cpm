@@ -43,7 +43,7 @@ SEP="------------------------------------------------------------"
 
 R=""
 
-R+="**CPM STATUS REPORT** | ${CPM_WORKSPACE_NAME:-$(basename "$ROOT")}"$'\n'
+R+="**CPM STATUS REPORT** | ${CPM_WORKSPACE_NAME:-$(basename "$WORKSPACE")}"$'\n'
 if [ -n "${CPM_USER_NAME:-}" ] && [ "$SHOW_ALL_USERS" -eq 0 ]; then
   R+="**${CPM_USER_NAME}** (@${CPM_USER_LOGIN}) | **${DAY_NAME}, ${TODAY} at ${NOW}**"$'\n'
 else
@@ -127,7 +127,7 @@ for project in "${CPM_PROJECTS[@]}"; do
     blockers_found=1
   fi
 
-  unpushed=$(cd "$repo_dir" && git log --oneline @{u}..HEAD 2>/dev/null | wc -l | tr -d ' ' || echo 0)
+  unpushed=$(cd "$repo_dir" && { git log --oneline @{u}..HEAD 2>/dev/null || true; } | wc -l | tr -d ' ')
   if [ "$unpushed" -gt 0 ]; then
     R+="  - ${unpushed} unpushed commit(s) — not yet on remote"$'\n'
     blockers_found=1
