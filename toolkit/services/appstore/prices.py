@@ -173,7 +173,13 @@ failed = []
 
 
 def post_price(sid, territory, point_id, preserve, plan_type):
-    asc.call('POST', '/v1/subscriptionPrices', P.price_body(sid, territory, point_id, preserve, plan_type))
+    # A subscription that is already approved has an initial price, and Apple
+    # refuses a second one (409 "Initial price cannot be created again"): a change
+    # must carry a start date, and Apple accepts tomorrow at the earliest
+    # ("a future date is expected"), so a change takes effect the next day.
+    import datetime
+    start = (datetime.datetime.now(datetime.timezone.utc).date() + datetime.timedelta(days=1)).isoformat()
+    asc.call('POST', '/v1/subscriptionPrices', P.price_body(sid, territory, point_id, preserve, plan_type, start))
 
 
 def apply_intro(sid, spec, rows, offers):
