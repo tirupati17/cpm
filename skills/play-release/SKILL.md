@@ -1,6 +1,6 @@
 ---
 name: play-release
-description: Use when publishing an Android app to Google Play (upload an AAB to internal, alpha, beta or production, staged rollout), when changing the Play listing text, screenshots, feature graphic or TV banner, when creating or repricing one-time in-app products, when checking what a Play track serves right now, or when Play rejects an upload, a versionCode, or an edit.
+description: Use when publishing an Android app to Google Play (upload an AAB to internal, alpha, beta or production, staged rollout), when changing the Play listing text, screenshots, feature graphic or TV banner, when creating or repricing one-time in-app products or subscription base plans and offers, when checking what a Play track serves right now, or when Play rejects an upload, a versionCode, or an edit.
 ---
 
 # Google Play: publish, listings, images, in-app products
@@ -42,6 +42,7 @@ cpm play listing [--languages en-US] [--create] [--forbid-dashes] [--commit]
 cpm play images --dir store-images [--commit]                       # phone screenshots + feature graphic
 cpm play images --device tv --dir play-assets/tv --size 1920x1080 [--commit]
 cpm play products --spec play-products.json [--commit]
+cpm play prices --spec ladder.json [--markdown table.md] [--commit]   # base plans, offers, one-time prices
 ```
 
 Paths default to the git toplevel of the current directory (`--repo` to override):
@@ -72,4 +73,5 @@ including the image folder layouts and the product spec format.
 - **Screenshots.** At most 8 per device type (more is refused, not truncated; choose the story with `--shots`). 24-bit PNG without alpha. Feature graphic 1024x500, TV banner 1280x720. Only languages that already have a listing are touched; `--create-listings` adds one from a reviewed `metadata.json`. Adding the TV or Wear form factor and sending it for review are Console steps, not API calls.
 - **In-app product ids are a contract** with whatever grants the purchase (the app, a billing backend like RevenueCat). Change them there first. Consumable vs non-consumable is not a Play setting for one-time products: the app or backend consumes the purchase.
 - **Regional prices.** Give a USD base; Play converts it per region. Hand-set a region (`"IN": "24 INR"`) when conversion lands on an odd number; use a region group at a lower USD price for lower-income economies. A stale `regionsVersion` is only named in the error; `products` retries once with the version Play asks for.
+- **Subscription prices (`prices`).** Per region: a hand-set price, else the App Store price when the currency matches (`match`: the JSON from `cpm appstore prices --out`), else Play's conversion of the USD price rounded to a local ending; a converted offer price is the region's new base price times the USD ratio, so the discount holds. Changing base plan prices never moves existing subscribers (no `migratePrices`). A base plan's billing period is fixed once active: `prices` compares it with the spec's `billingPeriod` and refuses to touch a mismatch. Play has no API for its per-currency price limits; `limitsUsd` converted per region is a sanity check only.
 - **Abandoned edits.** Every uncommitted edit (dry run, rejected upload, Ctrl-C) is deleted in a `finally`. If a command dies harder than that, the edit expires on its own; it does not block the next one.

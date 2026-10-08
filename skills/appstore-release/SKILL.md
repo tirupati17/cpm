@@ -1,6 +1,6 @@
 ---
 name: appstore-release
-description: Use when shipping an iOS app to App Store review (archive, upload, attach the build, write What's New, submit), when asked for the next build number or the app's marketing version, when an upload is rejected as a duplicate build or for a mismatched extension version, or to check what is in review right now.
+description: Use when shipping an iOS app to App Store review (archive, upload, attach the build, write What's New, submit), when repricing subscriptions, intro offers or in-app purchases across territories, when asked for the next build number or the app's marketing version, when an upload is rejected as a duplicate build or for a mismatched extension version, or to check what is in review right now.
 ---
 
 # App Store Connect: archive, upload, submit
@@ -33,6 +33,7 @@ cpm appstore release --commit --archive <path>.xcarchive   # reuse an archive (a
 cpm appstore release --commit --skip-upload   # already uploaded: wait, attach, submit
 cpm appstore release --commit --no-submit     # stop after attaching; submit by hand
 cpm appstore release --commit --testflight    # archive + upload only: a TestFlight build, even while a version is in review
+cpm appstore prices --spec ladder.json [--out ios.json] [--markdown table.md] [--commit]   # reprice from a spec
 ```
 
 Discovered, overridable: `--repo` (git toplevel), `--workspace`/`--xcodeproj`
@@ -53,6 +54,26 @@ Discovered, overridable: `--repo` (git toplevel), `--workspace`/`--xcodeproj`
 5. `cpm appstore status` to confirm `WAITING_FOR_REVIEW`.
 
 Never run `--commit` on an agent's own initiative: it builds, uploads and submits.
+
+## Repricing (`prices`)
+
+The spec (format in `toolkit/services/appstore/_prices.py`) names a base price in
+one territory that Apple's equalizations carry everywhere else, hand-set
+territories, an optional intro offer (exact prices, or the point nearest a fraction
+of the list price, with a discount range to flag), an optional instalment plan, and
+in-app purchase schedules. The dry run reads every price point it needs (a full
+fraction-of-list run takes about two minutes) and prints the point each territory
+gets; `--out` saves them for `cpm play prices --match`.
+
+- **One intro offer per territory.** Apple refuses an overlapping one, so `--commit`
+  tries the new offer first and deletes the old one only when the create is refused,
+  then creates again at once; a second failure restores the old offer.
+- **Existing subscribers.** `preserveCurrentPrice: true` keeps them on their price.
+- **Instalment plans.** A yearly can carry a MONTHLY plan type (pay monthly for a
+  year). Its prices and intro offers are separate records (`planType`); repricing
+  only the up-front plan leaves the instalment one at the old price.
+- **IAP schedules.** One POST replaces the whole schedule: name every manual
+  price; the rest become automatic from the base territory.
 
 ## Traps
 

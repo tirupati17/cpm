@@ -145,6 +145,20 @@ class ASC:
             path = following[len(API):] if following and following.startswith(API) else None
         return items
 
+    def get_all_with_included(self, path):
+        """Like get_all, but also keeps every page's `included` records.
+
+        Each page carries only the included records its own data points at, so
+        keeping just the first page's silently loses the rest."""
+        items, included = [], []
+        while path:
+            page = self.get(path)
+            items.extend(page.get('data') or [])
+            included.extend(page.get('included') or [])
+            following = (page.get('links') or {}).get('next')
+            path = following[len(API):] if following and following.startswith(API) else None
+        return items, included
+
     # -- lookups every command needs ------------------------------------------------
 
     def app(self, bundle_id):
