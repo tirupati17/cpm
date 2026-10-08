@@ -22,6 +22,7 @@ With --commit, per subscription:
      legacy price cohort: this command never calls migratePrices;
   3. create or update each offer (allowMissing), then activate it;
   4. point the base plan's legacy-compatible offer at the new one, if asked;
+     activate the base plan when the spec says activateBasePlan and it is a draft;
   5. deactivate the offers listed in deactivateOffers;
 then one-time products: their purchase option's regional prices. Each product is
 read back afterwards.
@@ -175,6 +176,11 @@ for kind, item, live, target, rows, offers, blocked in plans:
                              for b in live['basePlans']]
         live = patch_subscription(live)
         print(f'{pid}/{bp_id}: base plan prices saved')
+        state = next(b for b in live['basePlans'] if b['basePlanId'] == bp_id).get('state')
+        if item.get('activateBasePlan') and state != 'ACTIVE':
+            monetization.subscriptions().basePlans().activate(
+                packageName=PACKAGE, productId=pid, basePlanId=bp_id, body={}).execute()
+            print(f'  base plan {bp_id} activated (was {state})')
         offers_api = monetization.subscriptions().basePlans().offers()
         for offer in item.get('offers') or []:
             body = P.offer_body(PACKAGE, pid, bp_id, offer, rows, other(offer['usd']))
