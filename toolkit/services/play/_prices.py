@@ -235,7 +235,9 @@ def offer_body(package, product_id, base_plan_id, offer, rows, other):
     phase = {'recurrenceCount': 1, 'duration': offer['duration'],
              'regionalConfigs': [{'regionCode': r['region'], 'price': r['offer']} for r in rows if 'offer' in r]}
     if other:
-        phase['otherRegionsConfig'] = {'usdPrice': other['usdPrice'], 'eurPrice': other['eurPrice']}
+        # An offer phase nests the prices one level deeper than a base plan does.
+        phase['otherRegionsConfig'] = {'otherRegionsPrices': {'usdPrice': other['usdPrice'],
+                                                              'eurPrice': other['eurPrice']}}
     body = {'packageName': package, 'productId': product_id, 'basePlanId': base_plan_id,
             'offerId': offer['offerId'], 'phases': [phase],
             'regionalConfigs': [{'regionCode': r['region'], 'newSubscriberAvailability': True}
