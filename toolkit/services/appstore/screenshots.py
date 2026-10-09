@@ -110,7 +110,10 @@ def main(argv=None):
 
     asc = _asc.ASC()
     app_id, name = asc.app(_asc.resolve_bundle_id(args.bundle_id))
-    editable, _ = _asc.split_versions(asc.store_versions(app_id))
+    versions = asc.store_versions(app_id)
+    editable, _ = _asc.split_versions(versions)
+    # Added to a review submission but not yet submitted: still editable.
+    editable = editable or next((v for v in versions if v['attributes']['appStoreState'] == 'READY_FOR_REVIEW'), None)
     print(f'{name}: {len(files)} screenshots -> {args.locale} {args.display}')
     if editable is None:
         if not args.version:
