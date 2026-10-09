@@ -12,7 +12,9 @@ up in name order and replace whatever that display type held in that locale;
 other locales and display types are untouched.
 
 Display types: APP_IPHONE_67 takes the 6.9" 1320x2868 and 6.7" 1290x2796
-captures; APP_IPHONE_65 the 6.5" 1242x2688. Up to 10 per set.
+captures; APP_IPHONE_65 the 6.5" 1242x2688; APP_IPHONE_DUO 1398x2034 or
+2007x2853; APP_IPAD_PRO_3GEN_129 the 13" 2064x2752; APP_WATCH_ULTRA 422x514.
+Up to 10 per set.
 
 --previews uploads app preview videos (.mp4/.mov/.m4v, 15-30 s) instead, to the
 preview set of --display (IPHONE_67, IPHONE_65; both take 886x1920). Up to 3.
@@ -26,7 +28,13 @@ import sys
 import time
 import urllib.request
 
-SIZES = {'APP_IPHONE_67': {(1320, 2868), (1290, 2796)}, 'APP_IPHONE_65': {(1242, 2688), (1284, 2778)}}
+SIZES = {
+    'APP_IPHONE_67': {(1320, 2868), (1290, 2796)},
+    'APP_IPHONE_65': {(1242, 2688), (1284, 2778)},
+    'APP_IPHONE_DUO': {(1398, 2034), (2034, 1398), (2007, 2853), (2853, 2007)},
+    'APP_IPAD_PRO_3GEN_129': {(2064, 2752), (2752, 2064), (2048, 2732), (2732, 2048)},
+    'APP_WATCH_ULTRA': {(410, 502), (422, 514)},
+}
 
 
 def png_size(path):
