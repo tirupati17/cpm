@@ -1,0 +1,139 @@
+#!/usr/bin/env python3
+"""Replace an App Store screenshot set with the PNGs in a folder (dry run unless --commit).
+
+    cpm appstore screenshots ./shots/en --locale en-US
+    cpm appstore screenshots ./shots/en --locale en-US --display APP_IPHONE_67 --version 1.0.2 --commit
+
+Uploads to the EDITABLE store version (Prepare for Submission, Rejected, ...).
+A live version's screenshots cannot change, so when none is editable this
+creates one: --version names it (the release command later reuses and renames
+an editable version, so a placeholder is safe). The folder's .png/.jpg files go
+up in name order and replace whatever that display type held in that locale;
+other locales and display types are untouched.
+
+Display types: APP_IPHONE_67 takes the 6.9" 1320x2868 and 6.7" 1290x2796
+captures; APP_IPHONE_65 the 6.5" 1242x2688. Up to 10 per set.
+
+Credentials: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_PATH, ASC_BUNDLE_ID.
+"""
+import argparse
+import hashlib
+import os
+import sys
+import time
+import urllib.request
+
+SIZES = {'APP_IPHONE_67': {(1320, 2868), (1290, 2796)}, 'APP_IPHONE_65': {(1242, 2688), (1284, 2778)}}
+
+
+def png_size(path):
+    """(width, height) of a PNG from its header, or None for anything else."""
+    with open(path, 'rb') as f:
+        head = f.read(24)
+    if head[:8] != b'\x89PNG\r\n\x1a\n':
+        return None
+    return int.from_bytes(head[16:20], 'big'), int.from_bytes(head[20:24], 'big')
+
+
+def pick_files(folder):
+    files = sorted(f for f in os.listdir(folder) if f.lower().endswith(('.png', '.jpg', '.jpeg')))
+    return [os.path.join(folder, f) for f in files]
+
+
+def upload(asc, set_id, path, context):
+    data = open(path, 'rb').read()
+    shot = asc.call('POST', '/v1/appScreenshots', {'data': {
+        'type': 'appScreenshots', 'attributes': {'fileName': os.path.basename(path), 'fileSize': len(data)},
+        'relationships': {'appScreenshotSet': {'data': {'type': 'appScreenshotSets', 'id': set_id}}}}})['data']
+    for op in shot['attributes']['uploadOperations']:
+        chunk = data[op['offset']:op['offset'] + op['length']]
+        request = urllib.request.Request(op['url'], data=chunk, method=op['method'],
+                                         headers={h['name']: h['value'] for h in op.get('requestHeaders', [])})
+        with urllib.request.urlopen(request, context=context, timeout=120) as response:
+            response.read()
+    asc.call('PATCH', f"/v1/appScreenshots/{shot['id']}", {'data': {
+        'type': 'appScreenshots', 'id': shot['id'],
+        'attributes': {'uploaded': True, 'sourceFileChecksum': hashlib.md5(data).hexdigest()}}})
+    return shot['id']
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('folder', help='folder of screenshots, uploaded in name order')
+    parser.add_argument('--locale', default='en-US')
+    parser.add_argument('--display', default='APP_IPHONE_67', help='screenshotDisplayType (default APP_IPHONE_67)')
+    parser.add_argument('--version', help='versionString for a new editable version if none exists')
+    parser.add_argument('--bundle-id', help='app bundle id (default: ASC_BUNDLE_ID credential)')
+    parser.add_argument('--commit', action='store_true', help='actually change App Store Connect')
+    args = parser.parse_args(argv)
+
+    import _asc
+    files = pick_files(args.folder)
+    if not files:
+        _asc.die(f'no .png/.jpg in {args.folder}')
+    if len(files) > 10:
+        _asc.die(f'{len(files)} files; a set holds at most 10')
+    allowed = SIZES.get(args.display)
+    for f in files:
+        size = png_size(f)
+        if allowed and size and size not in allowed:
+            _asc.die(f'{os.path.basename(f)} is {size[0]}x{size[1]}, not a {args.display} size {sorted(allowed)}')
+
+    asc = _asc.ASC()
+    app_id, name = asc.app(_asc.resolve_bundle_id(args.bundle_id))
+    editable, _ = _asc.split_versions(asc.store_versions(app_id))
+    print(f'{name}: {len(files)} screenshots -> {args.locale} {args.display}')
+    if editable is None:
+        if not args.version:
+            _asc.die('no editable version; pass --version to create one')
+        if not args.commit:
+            print(f'  would create iOS version {args.version}, then replace the set')
+            for f in files:
+                print(f'  would upload {os.path.basename(f)}')
+            return 0
+        print(f'creating iOS version {args.version}')
+        editable = asc.call('POST', '/v1/appStoreVersions', {'data': {
+            'type': 'appStoreVersions', 'attributes': {'platform': 'IOS', 'versionString': args.version},
+            'relationships': {'app': {'data': {'type': 'apps', 'id': app_id}}}}})['data']
+        time.sleep(5)  # the copied localizations appear a moment after the version
+    print(f"  version {editable['attributes']['versionString']} ({editable['attributes']['appStoreState']})")
+
+    locs = asc.get(f"/v1/appStoreVersions/{editable['id']}/appStoreVersionLocalizations?limit=50")['data']
+    loc = next((l for l in locs if l['attributes']['locale'] == args.locale), None)
+    if loc is None:
+        _asc.die(f"no {args.locale} localization; have {', '.join(l['attributes']['locale'] for l in locs)}")
+    sets = asc.get(f"/v1/appStoreVersionLocalizations/{loc['id']}/appScreenshotSets?limit=50")['data']
+    target = next((s for s in sets if s['attributes']['screenshotDisplayType'] == args.display), None)
+    old = asc.get(f"/v1/appScreenshotSets/{target['id']}/appScreenshots?limit=50")['data'] if target else []
+    print(f'  {len(old)} existing screenshots in that set will be replaced')
+    if not args.commit:
+        for f in files:
+            print(f'  would upload {os.path.basename(f)}')
+        print('dry run; pass --commit')
+        return 0
+
+    if target is None:
+        target = asc.call('POST', '/v1/appScreenshotSets', {'data': {
+            'type': 'appScreenshotSets', 'attributes': {'screenshotDisplayType': args.display},
+            'relationships': {'appStoreVersionLocalization': {
+                'data': {'type': 'appStoreVersionLocalizations', 'id': loc['id']}}}}})['data']
+    for s in old:
+        asc.call('DELETE', f"/v1/appScreenshots/{s['id']}")
+    for f in files:
+        upload(asc, target['id'], f, asc._context)
+        print(f'  uploaded {os.path.basename(f)}')
+
+    # Apple processes each file after upload; report any it rejected.
+    for _ in range(24):
+        shots = asc.get(f"/v1/appScreenshotSets/{target['id']}/appScreenshots?limit=50")['data']
+        states = [(s['attributes'].get('assetDeliveryState') or {}).get('state') for s in shots]
+        if all(st in ('COMPLETE', 'FAILED') for st in states):
+            break
+        time.sleep(5)
+    failed = [s['attributes']['fileName'] for s, st in zip(shots, states) if st == 'FAILED']
+    print(f"{len(shots)} in set, {states.count('COMPLETE')} processed" + (f", FAILED: {failed}" if failed else ''))
+    return 1 if failed else 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
