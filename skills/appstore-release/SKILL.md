@@ -1,6 +1,6 @@
 ---
 name: appstore-release
-description: Use when shipping an iOS app to App Store review (archive, upload, attach the build, write What's New, submit), when repricing subscriptions, intro offers or in-app purchases across territories, when asked for the next build number or the app's marketing version, when an upload is rejected as a duplicate build or for a mismatched extension version, or to check what is in review right now.
+description: Use when shipping an iOS app to App Store review (archive, upload, attach the build, write What's New, submit), updating localized descriptions, keywords or promotional text for App Store search, submitting an existing ready review basket, repricing subscriptions, intro offers or in-app purchases across territories, checking version/build numbers or review status, or troubleshooting rejected uploads.
 ---
 
 # App Store Connect: archive, upload, submit
@@ -33,6 +33,10 @@ cpm appstore release --commit --archive <path>.xcarchive   # reuse an archive (a
 cpm appstore release --commit --skip-upload   # already uploaded: wait, attach, submit
 cpm appstore release --commit --no-submit     # stop after attaching; submit by hand
 cpm appstore release --commit --testflight    # archive + upload only: a TestFlight build, even while a version is in review
+cpm appstore metadata --spec listing.json    # preview localized description, keywords and promotional text
+cpm appstore metadata --spec listing.json --backup before.json --commit
+cpm appstore submit --version 1.2.3 --build 42          # inspect an existing ready review basket
+cpm appstore submit --version 1.2.3 --build 42 --commit # submit it without rebuilding or replacing assets
 cpm appstore prices --spec ladder.json [--out ios.json] [--markdown table.md] [--commit]   # reprice from a spec
 ```
 
@@ -55,6 +59,32 @@ Discovered, overridable: `--repo` (git toplevel), `--workspace`/`--xcodeproj`
 
 Never run `--commit` on an agent's own initiative: it builds, uploads and submits.
 
+## Localized listing text and an existing review basket
+
+`metadata` accepts JSON with `bundleId`, `platform`, `version`, and `localizations`.
+Each locale key contains any of `description`, `keywords`, `promotionalText`.
+It updates only those fields on existing locales, with no fallback translation,
+build attachment, image change or automatic submission. The version must be
+editable or `READY_FOR_REVIEW`. `--commit` requires a fresh backup path; it saves
+the original locale records, checks for concurrent text edits, and reads back
+each patch. Keep the reviewed spec in the app repo and backups outside it.
+
+For search, use relevant native-language terms and avoid repeating the app name,
+keywords already in the title/subtitle, competitor brands or duplicate terms.
+Use plain text descriptions with natural search phrases and accurate features.
+Promotional text supports conversion; Apple says it does not affect search ranking.
+Validate description at 4,000 characters, promotional text at 170 characters,
+and keywords conservatively at 100 UTF-8 bytes, per the
+[platform version reference](https://developer.apple.com/help/app-store-connect/reference/app-information/platform-version-information).
+Apple's [product page guidance](https://developer.apple.com/app-store/product-page/)
+describes keyword selection and promotional text. Do not claim measured search
+volume or ranking gains without data.
+
+When the user has already added a version for review, `submit` verifies the
+explicit version and valid attached build, finds its ready basket, and refuses
+extra/unrelated items. Run its dry run before `--commit`, then check `status`.
+It does not create a basket, edit text, attach builds or cancel another review.
+
 ## Repricing (`prices`)
 
 The spec (format in `toolkit/services/appstore/_prices.py`) names a base price in
@@ -76,6 +106,15 @@ gets; `--out` saves them for `cpm play prices --match`.
   price; the rest become automatic from the base territory.
 
 ## Traps
+
+- **READY_FOR_REVIEW is not a submitted review.** The user may have clicked Add
+  for Review without Submit. Text is still editable. Use `metadata` and then
+  `submit` for a metadata-only finish; `release --replace-in-review` would cancel
+  the existing basket unnecessarily.
+- **GET reviewSubmissionItems/{id} returns 403.** That resource's instance
+  route does not support GET. Read `/v1/reviewSubmissions/{id}/items` with
+  `include=appStoreVersion` and inspect each item's relationship. Never assume
+  a nonempty basket contains the intended version.
 
 - **Upload rejected as a duplicate, after a full archive.** The project pins
   `CURRENT_PROJECT_VERSION` and nothing bumps it; or a local counter or CI run
