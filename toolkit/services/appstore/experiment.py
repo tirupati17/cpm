@@ -87,6 +87,20 @@ def create(asc, kind, attrs, rels, version='v1'):
         'type': kind, 'attributes': attrs, 'relationships': rels}})['data']
 
 
+def processed_shots(asc, path, count=None):
+    # sourceFileChecksum can be null at UPLOAD_COMPLETE. It appears only after
+    # Apple finishes processing, even though the checksum PATCH succeeded.
+    for _ in range(36):
+        shots = asc.get_all(path)
+        states = [(s['attributes'].get('assetDeliveryState') or {}).get('state') for s in shots]
+        if 'FAILED' in states:
+            raise ValueError('Apple rejected a draft screenshot; inspect its asset errors.')
+        if all(state == 'COMPLETE' for state in states) and (count is None or len(shots) == count):
+            return shots
+        time.sleep(5)
+    raise ValueError('Assets are still processing. Resume the same spec later; do not create a duplicate test.')
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--spec', required=True)
@@ -181,7 +195,7 @@ def main(argv=None):
                     {'appStoreVersionExperimentTreatmentLocalization': relationship('appStoreVersionExperimentTreatmentLocalizations', loc['id'])})
             sid = target['id']
             shots_path = f'/v1/appScreenshotSets/{sid}/appScreenshots?limit=50'
-            shots = asc.get_all(shots_path)
+            shots = processed_shots(asc, shots_path)
             try:
                 offset = prefix_length(shots, planned_set['files'])
             except ValueError:
@@ -205,15 +219,8 @@ def main(argv=None):
             for file in planned_set['files'][offset:]:
                 screenshots.upload(asc, sid, file['path'], asc._context)
                 print(f"  {planned['name']}/{planned_set['locale']}: {file['name']}", flush=True)
-            for _ in range(36):
-                shots = asc.get_all(shots_path)
-                prefix_length(shots, planned_set['files'])
-                if len(shots) == len(planned_set['files']) and all(
-                    (s['attributes'].get('assetDeliveryState') or {}).get('state') == 'COMPLETE' for s in shots):
-                    break
-                time.sleep(5)
-            else:
-                raise ValueError('Assets are still processing. Resume the same spec later; do not create a duplicate test.')
+            shots = processed_shots(asc, shots_path, len(planned_set['files']))
+            prefix_length(shots, planned_set['files'])
             entry['sets'].append({'id': sid, 'locale': planned_set['locale'], 'display': planned_set['display'],
                 'files': [{'name': f['name'], 'md5': f['md5'], 'state': 'COMPLETE'} for f in planned_set['files']]})
         report['treatments'].append(entry)

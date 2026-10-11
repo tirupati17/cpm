@@ -2,6 +2,7 @@ import copy
 import importlib.util
 from pathlib import Path
 import unittest
+from unittest import mock
 
 spec = importlib.util.spec_from_file_location('experiment', Path(__file__).parents[1] / 'services/appstore/experiment.py')
 experiment = importlib.util.module_from_spec(spec)
@@ -62,6 +63,15 @@ class ExperimentSafetyTests(unittest.TestCase):
         changed[0]['attributes']['sourceFileChecksum'] = 'different'
         self.assertFalse(experiment.verified_inherited(changed, control))
         self.assertFalse(experiment.verified_inherited(copied * 2, control))
+
+    def test_processing_waits_for_checksum_instead_of_replacing_uploaded_asset(self):
+        pending = {'attributes': {'sourceFileChecksum': None, 'assetDeliveryState': {'state': 'UPLOAD_COMPLETE'}}}
+        complete = {'attributes': {'sourceFileChecksum': 'abc', 'assetDeliveryState': {'state': 'COMPLETE'}}}
+        client = mock.Mock()
+        client.get_all.side_effect = [[pending], [complete]]
+        with mock.patch.object(experiment.time, 'sleep'):
+            self.assertEqual(experiment.processed_shots(client, '/shots', 1), [complete])
+        client.call.assert_not_called()
 
 
 if __name__ == '__main__':

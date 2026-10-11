@@ -109,7 +109,9 @@ files. It reads every uploaded file back and requires `COMPLETE`. Apple populate
 new treatment localizations with copies of the live screenshot sets. To replace
 these, use `--replace-inherited`: it checks that draft and live IDs differ and
 that filenames, sizes and checksums match before deleting only those draft
-copies. The live set is read back afterward. The command never changes the app
+copies. At `UPLOAD_COMPLETE`, Apple may return a null checksum; wait for
+`COMPLETE` before comparing hashes rather than uploading the file again.
+The live set is read back afterward. The command never changes the app
 version, original page or review basket. If an upload is interrupted before its checksum lands, inspect that
 draft asset before retrying; do not create a duplicate experiment.
 
