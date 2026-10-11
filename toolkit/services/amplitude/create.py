@@ -46,7 +46,7 @@ def main(argv=None):
     # Never attach an SDK deployment until OFF + zero rollout have been read back.
     created = amp.management('POST', '/api/1/flags', body={
         'projectId': args.project_id, 'key': args.key, 'name': args.name or args.key,
-        'description': args.description, 'variants': [{'key': 'on'}],
+        'description': args.description or f'Feature flag: {args.key}', 'variants': [{'key': 'on'}],
         'rolloutWeights': {'on': 1}, 'evaluationMode': 'remote',
     })
     identifier = created.get('id')

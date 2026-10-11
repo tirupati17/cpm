@@ -23,6 +23,7 @@ cpm amplitude flags [--grep text] [--all]      # key, ON/off, rollout, variants,
 cpm amplitude create <key> --project-id <id> --deployment-id <id> [--commit]
 cpm amplitude flag <key> --off                 # dry run: current state and the PATCH
 cpm amplitude flag <key> --on --commit         # changes `enabled` only
+cpm amplitude rollout <key> --percent 100 [--commit] # simple on/off rollout; verified readback
 cpm amplitude target <key> --property beta_tester [--value true] [--remove] [--commit]
 cpm amplitude target --property beta_tester    # which flags carry that segment
 cpm amplitude events                           # event types with this week's totals
@@ -35,8 +36,9 @@ then patches `/api/1/flags/<id>`.
 
 `create` makes a new boolean flag safely disabled. It creates without deployments,
 sets OFF and 0%, reads that state back, then attaches the requested deployments
-and verifies again. It never edits an existing flag. Use the dashboard for
-rollout percentages, targeting and multivariate experiments. `flag --on` alone
+and verifies again. It never edits an existing flag. Use `rollout` only for an untargeted, single `on` variant attached to a deployment.
+It refuses experiments and segments, checks concurrent edits, and verifies the result.
+Use the dashboard for targeting and multivariate experiments. `flag --on` alone
 does not increase a new flag's 0% rollout.
 
 The management API's deployment list may contain ID strings or objects; normalize
@@ -81,3 +83,6 @@ because switching it on would release to that share of everyone.
   Amplitude's own range figure.
 - **Rate limits are tight** on smaller plans: queries run one at a time and
   429s are retried with Retry-After. Do not loop dozens of events per minute.
+
+- **Create returns 400 for an empty description.** Supply a meaningful description;
+  the toolkit defaults to a nonempty label when none is given.

@@ -151,3 +151,7 @@ gets; `--out` saves them for `cpm play prices --match`.
   venv, not `--break-system-packages`.
 - **Upload log warns about missing dSYMs** for a prebuilt binary framework. Often
   harmless and not fixable on your side; the build still processes.
+
+- **A checksummed PNG fails only in the built app.** Xcode rewrites loose PNG
+  resources during its copy phase. Package integrity-checked bytes with an opaque
+  extension and decode by content; verify the asset in the built app and archive.

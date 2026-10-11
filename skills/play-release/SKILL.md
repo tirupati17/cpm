@@ -86,3 +86,11 @@ including the image folder layouts and the product spec format.
 - **Regional prices.** Give a USD base; Play converts it per region. Hand-set a region (`"IN": "24 INR"`) when conversion lands on an odd number; use a region group at a lower USD price for lower-income economies. A stale `regionsVersion` is only named in the error; `products` retries once with the version Play asks for.
 - **Subscription prices (`prices`).** Per region: a hand-set price, else the App Store price when the currency matches (`match`: the JSON from `cpm appstore prices --out`), else Play's conversion of the USD price rounded to a local ending; a converted offer price is the region's new base price times the USD ratio, so the discount holds. Changing base plan prices never moves existing subscribers (no `migratePrices`). A base plan's billing period is fixed once active: `prices` compares it with the spec's `billingPeriod` and refuses to touch a mismatch. Play has no API for its per-currency price limits; `limitsUsd` converted per region is a sanity check only.
 - **Abandoned edits.** Every uncommitted edit (dry run, rejected upload, Ctrl-C) is deleted in a `finally`. If a command dies harder than that, the edit expires on its own; it does not block the next one.
+
+- **ARCore dependency type is missing during upload.** An XR dependency can add
+  `com.google.ar.core.min_apk_version` without a dependency declaration. If AR is
+  optional, add application metadata `com.google.ar.core=optional`, then rebuild
+  and check device filtering. Do not declare AR required for a phone panorama.
+- **A read-only screenshot backup edit disappears during an upload.** Opening a
+  second Play edit with the same identity invalidates the first. Serialize all
+  Play edits, including backups, validation runs, images and publishing.
