@@ -1,6 +1,6 @@
 ---
 name: appstore-release
-description: Use when shipping an iOS app to App Store review (archive, upload, attach the build, write What's New, submit), updating localized descriptions, keywords or promotional text for App Store search, submitting an existing ready review basket, repricing subscriptions, intro offers or in-app purchases across territories, checking version/build numbers or review status, or troubleshooting rejected uploads.
+description: Use when shipping an iOS app to App Store review (archive, upload, attach the build, write What's New, submit), updating localized descriptions, keywords or promotional text for App Store search, creating screenshot theme experiments or localized custom product pages for campaigns, submitting an existing ready review basket, repricing subscriptions, intro offers or in-app purchases across territories, checking version/build numbers or review status, or troubleshooting rejected uploads.
 ---
 
 # App Store Connect: archive, upload, submit
@@ -38,6 +38,7 @@ cpm appstore metadata --spec listing.json --backup before.json --commit
 cpm appstore submit --version 1.2.3 --build 42          # inspect an existing ready review basket
 cpm appstore submit --version 1.2.3 --build 42 --commit # submit it without rebuilding or replacing assets
 cpm appstore experiment --spec round.json [--out result.json] [--commit] # create/resume a draft screenshot test
+cpm appstore product-pages --spec pages.json --out result.json [--commit] # localized campaign page drafts
 cpm appstore prices --spec ladder.json [--out ios.json] [--markdown table.md] [--commit]   # reprice from a spec
 ```
 
@@ -123,6 +124,38 @@ show an upcoming feature, wait until that app version is live. Releasing new
 control-page artwork during a test can confound the results. A test may run for
 up to 90 days; use Apple's conversion-rate confidence before applying a winner.
 See [Apple's test setup](https://developer.apple.com/help/app-store-connect/create-product-page-optimization-tests/create-a-test/).
+
+## Localized custom product pages (`product-pages`)
+
+Use separate pages when campaign links and reporting need separate identities;
+a single page can also contain multiple localizations. The visitor's storefront
+and language settings select the localization: a campaign page name or `ppid`
+does not force a language. Include the app's primary locale as fallback.
+
+The JSON specifies `bundleId`, `sourceVersion`, `platform: "IOS"`, and `pages`.
+Each page has `name`, `campaignLocale`, and `localizations`; each locale has
+`locale`, `promotionalText` (at most 170 characters) and
+`screenshots: [{"display":"APP_IPHONE_67","folder":"shots"}]`.
+Folders resolve relative to the spec. Existing matching named pages are resumed
+only if they have a single `PREPARE_FOR_SUBMISSION` version. No approved page,
+app version, review basket or campaign is changed or submitted.
+
+Creating a page requires a compound request: include the new page version and
+its localizations using temporary IDs and `included`, even when using
+`appStoreVersionTemplate`. Omitting these relationships returns 409. A version
+awaiting review can be used as an API template; this does not alter its review.
+The copy is checked against local file hashes. Unknown remote files abort;
+only distinct, proven inherited copies can be replaced. Matching assets are
+reused and screenshot order is explicitly restored after additions. The result
+records URLs, IDs, localized text, processing states and checksums. A report
+with `allAssetsVerified: false` is pending, not a successful asset verification.
+
+Pages require Apple review before becoming usable destinations. Keep pages
+showing an upcoming feature as drafts until that version is live. Creating a
+page does not configure an ad network; verify the destination support for the
+specific campaign type before using the generated URL. Apple's
+[custom page guidance](https://developer.apple.com/help/app-store-connect/create-custom-product-pages/configure-multiple-product-page-versions/)
+describes localization, URLs and review.
 
 ## Repricing (`prices`)
 
