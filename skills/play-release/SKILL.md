@@ -62,6 +62,12 @@ including the image folder layouts and the product spec format.
 
 ## Traps
 
+- **A bundle upload times out after sending its bytes.** Resume the same Google
+  upload request: the next chunk checks the server's accepted byte range, including
+  whether the final chunk succeeded. The publisher uses 4 MiB chunks, progress
+  output, a 180-second request timeout and bounded transport retries. Do not bump
+  the version merely because the response was lost; check the existing library's
+  hash before deciding that a number is occupied by different bytes.
 - **An old bundle ships and every log looks right.** `artifacts/<version>/` survives a failed build. `publish` rehashes the AAB against `release.json` and checks it against the build file's version; never hand-edit `release.json` to get past that. Check timestamps too, and make sure the build script actually ran (a non-executable script exits 126 and leaves last run's files looking new; call it with `bash`).
 - **A staged rollout quietly becomes 100%.** Only rollout 100 is `completed`; anything less is `inProgress` with `userFraction`. Play rejects `userFraction` on a completed release.
 - **"versionCode already used".** A versionCode that was ever uploaded cannot be reused, even if never released. Bump it. `publish` reuses a bundle already in Play's library only when its sha256 matches `release.json`; the same number with different bytes is refused.

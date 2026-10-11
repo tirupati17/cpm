@@ -72,10 +72,12 @@ try:
         print(f'reusing uploaded versionCode {code} (sha256 matches release.json)')
     else:
         try:
-            uploaded = edits.bundles().upload(
+            request = edits.bundles().upload(
                 packageName=PACKAGE, editId=edit_id,
-                media_body=MediaFileUpload(str(aab), mimetype='application/octet-stream', resumable=True),
-            ).execute()
+                media_body=MediaFileUpload(str(aab), mimetype='application/octet-stream',
+                                          chunksize=4 * 1024 * 1024, resumable=True),
+            )
+            uploaded = _play.upload_resumable(request)
         except HttpError as error:
             if b'already been used' in error.content or b'already exists' in error.content:
                 raise SystemExit(f'versionCode {code} is already uploaded. Bump it before publishing again.')

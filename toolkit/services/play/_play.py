@@ -6,6 +6,9 @@ every command's --help and every local check runs without the SDK installed:
     pip install google-api-python-client google-auth
 """
 from pathlib import Path
+import socket
+import ssl
+import time
 
 from cpmkit import creds
 
@@ -29,11 +32,40 @@ def service():
     try:
         from google.oauth2 import service_account          # imported late so --help needs no SDK
         from googleapiclient.discovery import build
+        from google_auth_httplib2 import AuthorizedHttp
+        import httplib2
     except ImportError:
         raise SystemExit('The Google API client is not installed. '
                          'Run: pip install google-api-python-client google-auth')
     credentials = service_account.Credentials.from_service_account_file(str(key_file()), scopes=[SCOPE])
-    return build('androidpublisher', 'v3', credentials=credentials, cache_discovery=False)
+    http = AuthorizedHttp(credentials, http=httplib2.Http(timeout=180))
+    return build('androidpublisher', 'v3', http=http, cache_discovery=False)
+
+
+def upload_resumable(request, *, max_retries=3, sleep=time.sleep, report=print):
+    """Resume the same upload after a lost response, including its final chunk.
+
+    The Google client marks transport failures as an error state. Its next
+    next_chunk call asks the server which bytes it already accepted; starting
+    another upload instead loses that recovery path. HTTP errors are handled by
+    the client's bounded backoff, while transport exceptions need this outer loop.
+    """
+    failures = 0
+    while True:
+        try:
+            status, result = request.next_chunk(num_retries=3)
+        except (TimeoutError, ConnectionError, socket.gaierror, ssl.SSLError):
+            if failures >= max_retries:
+                raise
+            failures += 1
+            report(f'upload connection interrupted; resuming ({failures}/{max_retries})')
+            sleep(2 ** (failures - 1))
+            continue
+        failures = 0
+        if result is not None:
+            return result
+        if status is not None:
+            report(f'upload {status.progress():.0%}')
 
 
 def discard(edits, package_name, edit_id):
