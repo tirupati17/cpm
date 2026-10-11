@@ -94,3 +94,7 @@ including the image folder layouts and the product spec format.
 - **A read-only screenshot backup edit disappears during an upload.** Opening a
   second Play edit with the same identity invalidates the first. Serialize all
   Play edits, including backups, validation runs, images and publishing.
+- **Image upload exits with 503 after the commit.** The write may already have
+  succeeded and only the post-commit read failed. Inspect the failing call before
+  retrying the upload. Open one read-only edit, compare screenshot order and each
+  returned `sha256` with the local files, then discard that edit.
