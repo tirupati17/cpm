@@ -73,6 +73,17 @@ class ExperimentSafetyTests(unittest.TestCase):
             self.assertEqual(experiment.processed_shots(client, '/shots', 1), [complete])
         client.call.assert_not_called()
 
+    def test_pending_upload_can_be_skipped_but_never_passes_final_verification(self):
+        shots = [{'attributes': {'fileName': '01.png', 'fileSize': 123,
+                  'sourceFileChecksum': None, 'assetDeliveryState': {'state': 'UPLOAD_COMPLETE'}}}]
+        files = [{'name': '01.png', 'bytes': 123, 'md5': 'abc'}]
+        self.assertEqual(experiment.prefix_length(shots, files, allow_processing=True), 1)
+        with self.assertRaises(ValueError):
+            experiment.prefix_length(shots, files)
+        shots[0]['attributes']['fileSize'] = 124
+        with self.assertRaises(ValueError):
+            experiment.prefix_length(shots, files, allow_processing=True)
+
 
 if __name__ == '__main__':
     unittest.main()

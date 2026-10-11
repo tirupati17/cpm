@@ -56,12 +56,15 @@ def verify_draft(experiment, spec):
         raise ValueError('Existing experiment platform differs.')
 
 
-def prefix_length(shots, files):
+def prefix_length(shots, files, allow_processing=False):
     if len(shots) > len(files):
         raise ValueError('Remote set contains additional screenshots; refusing to replace it.')
     for shot, file in zip(shots, files):
         a = shot['attributes']
-        if a.get('fileName') != file['name'] or a.get('sourceFileChecksum') != file['md5']:
+        pending = (allow_processing and a.get('sourceFileChecksum') is None
+                   and (a.get('assetDeliveryState') or {}).get('state') == 'UPLOAD_COMPLETE'
+                   and a.get('fileSize') == file.get('bytes') and file.get('bytes') is not None)
+        if a.get('fileName') != file['name'] or (a.get('sourceFileChecksum') != file['md5'] and not pending):
             raise ValueError(f"Remote screenshot differs from {file['name']}; inspect the draft before retrying.")
         if (a.get('assetDeliveryState') or {}).get('state') == 'FAILED':
             raise ValueError(f"Apple rejected {file['name']}; inspect the draft before retrying.")
@@ -129,7 +132,7 @@ def main(argv=None):
             for file in files:
                 if screenshots.png_size(file) not in screenshots.SIZES[item['display']]:
                     raise ValueError(f'{file}: not a supported PNG screenshot size.')
-                records.append({'path': str(file), 'name': file.name,
+                records.append({'path': str(file), 'name': file.name, 'bytes': file.stat().st_size,
                                 'md5': hashlib.md5(file.read_bytes()).hexdigest()})
             sets.append({**item, 'files': records})
         work.append({'name': treatment['name'], 'sets': sets})
@@ -171,6 +174,7 @@ def main(argv=None):
         raise ValueError('Draft has unexpected treatments; refusing to modify it.')
     report = {'appId': app_id, 'experimentId': eid, 'name': spec['name'], 'treatments': []}
     controls = {}
+    verification = []
     for planned in work:
         matches = [t for t in remote if t['attributes']['name'] == planned['name']]
         if len(matches) > 1:
@@ -195,9 +199,9 @@ def main(argv=None):
                     {'appStoreVersionExperimentTreatmentLocalization': relationship('appStoreVersionExperimentTreatmentLocalizations', loc['id'])})
             sid = target['id']
             shots_path = f'/v1/appScreenshotSets/{sid}/appScreenshots?limit=50'
-            shots = processed_shots(asc, shots_path)
+            shots = asc.get_all(shots_path)
             try:
-                offset = prefix_length(shots, planned_set['files'])
+                offset = prefix_length(shots, planned_set['files'], allow_processing=True)
             except ValueError:
                 if not args.replace_inherited:
                     raise
@@ -219,11 +223,15 @@ def main(argv=None):
             for file in planned_set['files'][offset:]:
                 screenshots.upload(asc, sid, file['path'], asc._context)
                 print(f"  {planned['name']}/{planned_set['locale']}: {file['name']}", flush=True)
-            shots = processed_shots(asc, shots_path, len(planned_set['files']))
-            prefix_length(shots, planned_set['files'])
+            verification.append((shots_path, planned_set['files']))
             entry['sets'].append({'id': sid, 'locale': planned_set['locale'], 'display': planned_set['display'],
                 'files': [{'name': f['name'], 'md5': f['md5'], 'state': 'COMPLETE'} for f in planned_set['files']]})
         report['treatments'].append(entry)
+    # Upload independent treatments before waiting on Apple's processing queue.
+    # Pending assets are never reported as verified until strict hashes match.
+    for shots_path, files in verification:
+        shots = processed_shots(asc, shots_path, len(files))
+        prefix_length(shots, files)
     final = asc.get(f'/v2/appStoreVersionExperiments/{eid}')['data']
     verify_draft(final, spec)
     for _, control_path, before in controls.values():
