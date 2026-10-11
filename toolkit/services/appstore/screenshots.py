@@ -24,9 +24,11 @@ Credentials: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_PATH, ASC_BUNDLE_ID.
 import argparse
 import hashlib
 import os
+from pathlib import Path
 import sys
 import time
 import urllib.request
+import urllib.error
 
 SIZES = {
     'APP_IPHONE_67': {(1320, 2868), (1290, 2796)},
@@ -62,7 +64,7 @@ MIME = {'.mp4': 'video/mp4', '.mov': 'video/quicktime', '.m4v': 'video/x-m4v'}
 
 
 def upload(asc, set_id, path, context, kind=KINDS['screenshots']):
-    data = open(path, 'rb').read()
+    data = Path(path).read_bytes()
     attrs = {'fileName': os.path.basename(path), 'fileSize': len(data)}
     mime = MIME.get(os.path.splitext(path)[1].lower())
     if mime:
@@ -70,12 +72,48 @@ def upload(asc, set_id, path, context, kind=KINDS['screenshots']):
     shot = asc.call('POST', f"/v1/{kind['item']}", {'data': {
         'type': kind['item'], 'attributes': attrs,
         'relationships': {kind['rel']: {'data': {'type': kind['set'], 'id': set_id}}}}})['data']
-    for op in shot['attributes']['uploadOperations']:
+    return _transfer(asc, shot, data, context, kind)
+
+
+def resume_upload(asc, shot_id, path, context, kind=KINDS['screenshots'], set_id=None):
+    shot = asc.get(f"/v1/{kind['item']}/{shot_id}")['data']
+    data = Path(path).read_bytes()
+    attrs = shot['attributes']
+    if (attrs.get('fileName') != os.path.basename(path) or attrs.get('fileSize') != len(data)
+            or attrs.get('sourceFileChecksum') is not None
+            or (attrs.get('assetDeliveryState') or {}).get('state') != 'AWAITING_UPLOAD'):
+        raise ValueError('Only a matching unuploaded reservation can be resumed.')
+    if not attrs.get('uploadOperations'):
+        # Apple may expose signed transfer URLs only on the create response.
+        # Replace this verified empty reservation, never an uploaded asset.
+        if not set_id:
+            raise ValueError('Parent set ID is required to replace an empty reservation.')
+        asc.call('DELETE', f"/v1/{kind['item']}/{shot_id}")
+        return upload(asc, set_id, path, context, kind)
+    return _transfer(asc, shot, data, context, kind)
+
+
+def _transfer(asc, shot, data, context, kind):
+    operations = shot['attributes'].get('uploadOperations') or []
+    if not operations:
+        raise ValueError('The upload reservation has no transfer operations.')
+    for op in operations:
         chunk = data[op['offset']:op['offset'] + op['length']]
         request = urllib.request.Request(op['url'], data=chunk, method=op['method'],
                                          headers={h['name']: h['value'] for h in op.get('requestHeaders', [])})
-        with urllib.request.urlopen(request, context=context, timeout=120) as response:
-            response.read()
+        for attempt in range(3):
+            try:
+                with urllib.request.urlopen(request, context=context, timeout=120) as response:
+                    response.read()
+                break
+            except urllib.error.HTTPError as error:
+                if error.code not in (408, 429, 500, 502, 503, 504) or attempt == 2:
+                    raise
+                time.sleep(2 ** attempt)
+            except (urllib.error.URLError, TimeoutError, ConnectionError):
+                if attempt == 2:
+                    raise
+                time.sleep(2 ** attempt)
     asc.call('PATCH', f"/v1/{kind['item']}/{shot['id']}", {'data': {
         'type': kind['item'], 'id': shot['id'],
         'attributes': {'uploaded': True, 'sourceFileChecksum': hashlib.md5(data).hexdigest()}}})

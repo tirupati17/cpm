@@ -200,6 +200,15 @@ def main(argv=None):
             sid = target['id']
             shots_path = f'/v1/appScreenshotSets/{sid}/appScreenshots?limit=50'
             shots = asc.get_all(shots_path)
+            # A lost PUT can leave a reserved final asset without any file bytes.
+            # Resume it only after proving all earlier draft files match this spec.
+            if shots and (shots[-1]['attributes'].get('assetDeliveryState') or {}).get('state') == 'AWAITING_UPLOAD':
+                index = prefix_length(shots[:-1], planned_set['files'], allow_processing=True)
+                if index >= len(planned_set['files']):
+                    raise ValueError('Unexpected extra upload reservation.')
+                screenshots.resume_upload(asc, shots[-1]['id'], planned_set['files'][index]['path'], asc._context, set_id=sid)
+                print(f"  {planned['name']}: resumed {planned_set['files'][index]['name']}", flush=True)
+                shots = asc.get_all(shots_path)
             try:
                 offset = prefix_length(shots, planned_set['files'], allow_processing=True)
             except ValueError:

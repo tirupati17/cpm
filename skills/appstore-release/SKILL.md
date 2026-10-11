@@ -112,8 +112,11 @@ that filenames, sizes and checksums match before deleting only those draft
 copies. At `UPLOAD_COMPLETE`, Apple may return a null checksum; wait for
 `COMPLETE` before comparing hashes rather than uploading the file again.
 The live set is read back afterward. The command never changes the app
-version, original page or review basket. If an upload is interrupted before its checksum lands, inspect that
-draft asset before retrying; do not create a duplicate experiment.
+version, original page or review basket. If a PUT is interrupted, the final asset may remain `AWAITING_UPLOAD`. The
+command checks the prior file prefix, name and byte count before resuming that
+reservation. Apple may omit transfer URLs on GET; then only that verified empty
+reservation is replaced. Uploaded or processing files are never reset. Transfer
+PUTs retry transient network failures without creating duplicate reservations.
 
 Start the draft in App Store Connect after its assets pass review. If screenshots
 show an upcoming feature, wait until that app version is live. Releasing new
