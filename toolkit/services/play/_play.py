@@ -32,13 +32,17 @@ def service():
     try:
         from google.oauth2 import service_account          # imported late so --help needs no SDK
         from googleapiclient.discovery import build
+        from googleapiclient.http import build_http
         from google_auth_httplib2 import AuthorizedHttp
-        import httplib2
     except ImportError:
         raise SystemExit('The Google API client is not installed. '
                          'Run: pip install google-api-python-client google-auth')
     credentials = service_account.Credentials.from_service_account_file(str(key_file()), scopes=[SCOPE])
-    http = AuthorizedHttp(credentials, http=httplib2.Http(timeout=180))
+    # Google's builder excludes 308 from redirects: resumable upload uses it
+    # for "Resume Incomplete", without a Location header.
+    transport = build_http()
+    transport.timeout = 180
+    http = AuthorizedHttp(credentials, http=transport)
     return build('androidpublisher', 'v3', http=http, cache_discovery=False)
 
 

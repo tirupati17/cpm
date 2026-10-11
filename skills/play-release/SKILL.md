@@ -68,6 +68,11 @@ including the image folder layouts and the product spec format.
   output, a 180-second request timeout and bounded transport retries. Do not bump
   the version merely because the response was lost; check the existing library's
   hash before deciding that a number is occupied by different bytes.
+- **`RedirectMissingLocation` during a chunked upload.** Google's 308 means
+  "Resume Incomplete", not an HTTP redirect. When supplying an authenticated
+  HTTP client, construct its transport with `googleapiclient.http.build_http()`;
+  it removes 308 from httplib2's redirect codes. A plain `httplib2.Http` misses
+  that configuration and fails on the first incomplete chunk.
 - **An old bundle ships and every log looks right.** `artifacts/<version>/` survives a failed build. `publish` rehashes the AAB against `release.json` and checks it against the build file's version; never hand-edit `release.json` to get past that. Check timestamps too, and make sure the build script actually ran (a non-executable script exits 126 and leaves last run's files looking new; call it with `bash`).
 - **A staged rollout quietly becomes 100%.** Only rollout 100 is `completed`; anything less is `inProgress` with `userFraction`. Play rejects `userFraction` on a completed release.
 - **"versionCode already used".** A versionCode that was ever uploaded cannot be reused, even if never released. Bump it. `publish` reuses a bundle already in Play's library only when its sha256 matches `release.json`; the same number with different bytes is refused.
