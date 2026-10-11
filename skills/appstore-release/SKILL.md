@@ -89,7 +89,9 @@ It does not create a basket, edit text, attach builds or cancel another review.
 ## Screenshot theme tests (`experiment`)
 
 Product Page Optimization supports at most three treatments against the original
-page per test. Use multiple rounds for more themes, with one running at a time.
+page per test. Apple also refuses a second draft while one is in
+`PREPARE_FOR_SUBMISSION`. Prepare later rounds locally and create them when the
+existing round is finished, with one running at a time.
 Keep app captures, captions and ordering identical when testing artwork colours;
 an artwork theme does not prove that the pictured app UI uses that theme.
 
@@ -103,9 +105,12 @@ the original gets 25%.
 Run the dry run before `--commit`. The command creates only drafts, requires a
 live iOS version, refuses a started/submitted test, and resumes only matching
 named drafts whose screenshot order and checksums match a prefix of the local
-files. It reads every uploaded file back and requires `COMPLETE`. It never
-deletes existing screenshots or changes the app version, original page or review
-basket. If an upload is interrupted before its checksum lands, inspect that
+files. It reads every uploaded file back and requires `COMPLETE`. Apple populates
+new treatment localizations with copies of the live screenshot sets. To replace
+these, use `--replace-inherited`: it checks that draft and live IDs differ and
+that filenames, sizes and checksums match before deleting only those draft
+copies. The live set is read back afterward. The command never changes the app
+version, original page or review basket. If an upload is interrupted before its checksum lands, inspect that
 draft asset before retrying; do not create a duplicate experiment.
 
 Start the draft in App Store Connect after its assets pass review. If screenshots

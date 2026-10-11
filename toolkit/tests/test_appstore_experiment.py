@@ -52,6 +52,17 @@ class ExperimentSafetyTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             experiment.prefix_length(shots * 3, files)
 
+    def test_inherited_replacement_requires_distinct_ids_and_matching_fingerprints(self):
+        control = [{'id': 'live', 'attributes': {'fileName': '01.png', 'sourceFileChecksum': 'abc', 'fileSize': 123}}]
+        copied = [{**control[0], 'id': 'draft'}]
+        self.assertTrue(experiment.verified_inherited(copied, control))
+        self.assertFalse(experiment.verified_inherited(control, control))
+        self.assertFalse(experiment.verified_inherited([], control))
+        changed = copy.deepcopy(copied)
+        changed[0]['attributes']['sourceFileChecksum'] = 'different'
+        self.assertFalse(experiment.verified_inherited(changed, control))
+        self.assertFalse(experiment.verified_inherited(copied * 2, control))
+
 
 if __name__ == '__main__':
     unittest.main()

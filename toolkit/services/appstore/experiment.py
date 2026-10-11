@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Create or resume a draft screenshot experiment (dry run unless --commit).
 
-cpm appstore experiment --spec round.json [--out result.json] [--commit]
+cpm appstore experiment --spec round.json [--out result.json] [--replace-inherited] [--commit]
 
 Spec: bundleId, name, platform (IOS), trafficProportion, treatments containing
 name and screenshots [{locale, display, folder}]. Folder paths are relative to
 the spec. Only named PREPARE_FOR_SUBMISSION drafts are resumed. Existing files
-must be an exact prefix of the local set. Never starts a test, submits a review,
-changes a live page, deletes screenshots, or edits an app version.
+must be an exact prefix of the local set. --replace-inherited replaces only
+distinct draft copies whose fingerprints match the current live screenshots.
+Never starts a test, submits a review, changes a live page, or edits an app version.
 """
 import argparse
 from datetime import datetime, timezone
@@ -71,6 +72,16 @@ def relationship(kind, identifier):
     return {'data': {'type': kind, 'id': identifier}}
 
 
+def verified_inherited(shots, control):
+    def fingerprint(shot):
+        a = shot['attributes']
+        return a.get('fileName'), a.get('sourceFileChecksum'), a.get('fileSize')
+    return (bool(shots) and len(shots) == len(control)
+            and not ({s['id'] for s in shots} & {s['id'] for s in control})
+            and all(s['attributes'].get('sourceFileChecksum') for s in shots)
+            and [fingerprint(s) for s in shots] == [fingerprint(s) for s in control])
+
+
 def create(asc, kind, attrs, rels, version='v1'):
     return asc.call('POST', f'/{version}/{kind}', {'data': {
         'type': kind, 'attributes': attrs, 'relationships': rels}})['data']
@@ -81,6 +92,8 @@ def main(argv=None):
     parser.add_argument('--spec', required=True)
     parser.add_argument('--out', help='write verified experiment IDs and asset checksums')
     parser.add_argument('--commit', action='store_true')
+    parser.add_argument('--replace-inherited', action='store_true',
+                        help='replace distinct draft copies only when they match the live screenshot set')
     args = parser.parse_args(argv)
     path = Path(args.spec).resolve()
     spec = json.loads(path.read_text())
@@ -112,8 +125,8 @@ def main(argv=None):
     live = next((v for v in versions if v['attributes']['appStoreState'] in ('READY_FOR_SALE', 'READY_FOR_DISTRIBUTION')), None)
     if not live:
         raise ValueError('A live iOS app version is required for a product-page experiment.')
-    locales = {l['attributes']['locale'] for l in asc.get_all(
-        f"/v1/appStoreVersions/{live['id']}/appStoreVersionLocalizations?limit=50")}
+    live_locs = asc.get_all(f"/v1/appStoreVersions/{live['id']}/appStoreVersionLocalizations?limit=50")
+    locales = {l['attributes']['locale'] for l in live_locs}
     if any(s['locale'] not in locales for t in work for s in t['sets']):
         raise ValueError('A requested localization is absent from the live app version.')
     existing = asc.get_all(f'/v1/apps/{app_id}/appStoreVersionExperimentsV2?limit=200')
@@ -121,6 +134,8 @@ def main(argv=None):
     if len(matching) > 1:
         raise ValueError('Multiple experiments share this name; use a unique name.')
     experiment = matching[0] if matching else None
+    if not experiment and any(e['attributes']['state'] == 'PREPARE_FOR_SUBMISSION' for e in existing):
+        raise ValueError('Apple allows only one draft experiment per app. Finish the existing round before creating another.')
     if experiment:
         verify_draft(experiment, spec)
     print(f"{app_name}: {spec['name']} — draft only; {spec['trafficProportion']}% total treatment traffic", flush=True)
@@ -141,6 +156,7 @@ def main(argv=None):
     if any(t['attributes']['name'] not in expected_names for t in remote):
         raise ValueError('Draft has unexpected treatments; refusing to modify it.')
     report = {'appId': app_id, 'experimentId': eid, 'name': spec['name'], 'treatments': []}
+    controls = {}
     for planned in work:
         matches = [t for t in remote if t['attributes']['name'] == planned['name']]
         if len(matches) > 1:
@@ -166,7 +182,26 @@ def main(argv=None):
             sid = target['id']
             shots_path = f'/v1/appScreenshotSets/{sid}/appScreenshots?limit=50'
             shots = asc.get_all(shots_path)
-            offset = prefix_length(shots, planned_set['files'])
+            try:
+                offset = prefix_length(shots, planned_set['files'])
+            except ValueError:
+                if not args.replace_inherited:
+                    raise
+                key = planned_set['locale'], planned_set['display']
+                if key not in controls:
+                    live_loc = next(l for l in live_locs if l['attributes']['locale'] == key[0])
+                    live_sets = asc.get_all(f"/v1/appStoreVersionLocalizations/{live_loc['id']}/appScreenshotSets?limit=50")
+                    live_set = next(s for s in live_sets if s['attributes']['screenshotDisplayType'] == key[1])
+                    control_path = f"/v1/appScreenshotSets/{live_set['id']}/appScreenshots?limit=50"
+                    controls[key] = (live_set['id'], control_path, asc.get_all(control_path))
+                control_id, control_path, control = controls[key]
+                if sid == control_id or not verified_inherited(shots, control):
+                    raise ValueError('Draft files do not match separate copies of the live set; refusing replacement.')
+                verify_draft(asc.get(f'/v2/appStoreVersionExperiments/{eid}')['data'], spec)
+                print(f"  {planned['name']}: replacing {len(shots)} verified inherited draft copies", flush=True)
+                for shot in shots:
+                    asc.call('DELETE', f"/v1/appScreenshots/{shot['id']}")
+                offset = 0
             for file in planned_set['files'][offset:]:
                 screenshots.upload(asc, sid, file['path'], asc._context)
                 print(f"  {planned['name']}/{planned_set['locale']}: {file['name']}", flush=True)
@@ -184,8 +219,14 @@ def main(argv=None):
         report['treatments'].append(entry)
     final = asc.get(f'/v2/appStoreVersionExperiments/{eid}')['data']
     verify_draft(final, spec)
+    for _, control_path, before in controls.values():
+        after = asc.get_all(control_path)
+        if [(s['id'], s['attributes'].get('sourceFileChecksum')) for s in after] != [
+                (s['id'], s['attributes'].get('sourceFileChecksum')) for s in before]:
+            raise ValueError('The control page changed during this operation; inspect before starting the test.')
     report.update(state=final['attributes']['state'], trafficProportion=final['attributes']['trafficProportion'],
-                  startDate=final['attributes'].get('startDate'), verifiedAt=datetime.now(timezone.utc).isoformat())
+                  startDate=final['attributes'].get('startDate'), verifiedAt=datetime.now(timezone.utc).isoformat(),
+                  controlScreenshotsPreserved=True)
     if args.out:
         Path(args.out).write_text(json.dumps(report, indent=2) + '\n')
     print(f"DRAFT VERIFIED: {eid}, {len(work)} treatments, all screenshot checksums and processing states match.", flush=True)
