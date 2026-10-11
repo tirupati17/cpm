@@ -37,6 +37,7 @@ cpm appstore metadata --spec listing.json    # preview localized description, ke
 cpm appstore metadata --spec listing.json --backup before.json --commit
 cpm appstore submit --version 1.2.3 --build 42          # inspect an existing ready review basket
 cpm appstore submit --version 1.2.3 --build 42 --commit # submit it without rebuilding or replacing assets
+cpm appstore experiment --spec round.json [--out result.json] [--commit] # create/resume a draft screenshot test
 cpm appstore prices --spec ladder.json [--out ios.json] [--markdown table.md] [--commit]   # reprice from a spec
 ```
 
@@ -84,6 +85,34 @@ When the user has already added a version for review, `submit` verifies the
 explicit version and valid attached build, finds its ready basket, and refuses
 extra/unrelated items. Run its dry run before `--commit`, then check `status`.
 It does not create a basket, edit text, attach builds or cancel another review.
+
+## Screenshot theme tests (`experiment`)
+
+Product Page Optimization supports at most three treatments against the original
+page per test. Use multiple rounds for more themes, with one running at a time.
+Keep app captures, captions and ordering identical when testing artwork colours;
+an artwork theme does not prove that the pictured app UI uses that theme.
+
+The experiment JSON names `bundleId`, `name`, `platform: "IOS"`,
+`trafficProportion` and `treatments`. Each treatment has a unique `name` and
+`screenshots: [{"locale":"en-US","display":"APP_IPHONE_67","folder":"shots"}]`.
+Folders resolve relative to the JSON. All treatments target the same locales and
+display sizes. With three treatments and 75% traffic, each treatment gets 25% and
+the original gets 25%.
+
+Run the dry run before `--commit`. The command creates only drafts, requires a
+live iOS version, refuses a started/submitted test, and resumes only matching
+named drafts whose screenshot order and checksums match a prefix of the local
+files. It reads every uploaded file back and requires `COMPLETE`. It never
+deletes existing screenshots or changes the app version, original page or review
+basket. If an upload is interrupted before its checksum lands, inspect that
+draft asset before retrying; do not create a duplicate experiment.
+
+Start the draft in App Store Connect after its assets pass review. If screenshots
+show an upcoming feature, wait until that app version is live. Releasing new
+control-page artwork during a test can confound the results. A test may run for
+up to 90 days; use Apple's conversion-rate confidence before applying a winner.
+See [Apple's test setup](https://developer.apple.com/help/app-store-connect/create-product-page-optimization-tests/create-a-test/).
 
 ## Repricing (`prices`)
 
