@@ -20,6 +20,7 @@ description: Use when listing or checking Amplitude Experiment feature flags, tu
 
 ```bash
 cpm amplitude flags [--grep text] [--all]      # key, ON/off, rollout, variants, segments, deployments
+cpm amplitude create <key> --project-id <id> --deployment-id <id> [--commit]
 cpm amplitude flag <key> --off                 # dry run: current state and the PATCH
 cpm amplitude flag <key> --on --commit         # changes `enabled` only
 cpm amplitude target <key> --property beta_tester [--value true] [--remove] [--commit]
@@ -28,9 +29,20 @@ cpm amplitude events                           # event types with this week's to
 cpm amplitude events --event app_opened --days 30 [--metric uniques] [--daily]
 ```
 
-`flag` only flips `enabled`; rollout, variants and targeting stay as they are,
-and creating flags stays in the UI. It looks the key up to find the numeric id,
+`flag` only flips `enabled`; rollout, variants and targeting stay as they are.
+Use `create` for a new disabled boolean flag. It looks the key up to find the numeric id,
 then patches `/api/1/flags/<id>`.
+
+`create` makes a new boolean flag safely disabled. It creates without deployments,
+sets OFF and 0%, reads that state back, then attaches the requested deployments
+and verifies again. It never edits an existing flag. Use the dashboard for
+rollout percentages, targeting and multivariate experiments. `flag --on` alone
+does not increase a new flag's 0% rollout.
+
+The management API's deployment list may contain ID strings or objects; normalize
+both before checking it. Do not mistake a formatter failure for a failed create:
+look up the existing key before retrying. The flag detail endpoint is the final
+verification, not the POST response.
 
 `target` gives one group a feature first: it adds a segment
 `gp:<property> is <value> -> on` in front of the base rollout, named after the
