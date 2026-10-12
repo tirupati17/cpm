@@ -132,6 +132,17 @@ a single page can also contain multiple localizations. The visitor's storefront
 and language settings select the localization: a campaign page name or `ppid`
 does not force a language. Include the app's primary locale as fallback.
 
+Every custom-page locale must already exist on the source app version. Apple
+returns 409 if a compound page creation requests a language absent from that
+version, even when it is listed among supported App Store languages. This is
+an Apple constraint, not just the tool's preflight guard. Add the language to an
+editable app-version draft first, then use that version as the page template.
+Do not relabel translated screenshots as the primary language to bypass this.
+If only some requested pages meet the prerequisite, finish and verify those
+with a reduced spec, and retain the other page specs as pending. A report saved
+before a later page fails is incomplete; rerun the ready subset for checksum
+verification before reporting success.
+
 The JSON specifies `bundleId`, `sourceVersion`, `platform: "IOS"`, and `pages`.
 Each page has `name`, `campaignLocale`, and `localizations`; each locale has
 `locale`, `promotionalText` (at most 170 characters) and

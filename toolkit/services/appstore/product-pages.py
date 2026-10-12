@@ -129,8 +129,13 @@ def main(argv=None):
     source_codes = {l['attributes']['locale'] for l in source_locs}
     for p in spec['pages']:
         codes = {l['locale'] for l in p['localizations']}
-        if primary not in codes or not codes <= source_codes:
-            raise ValueError('Pages require the primary locale plus only existing source-version locales.')
+        if primary not in codes:
+            raise ValueError(f"Page {p['name']} requires primary locale {primary}.")
+        if not codes <= source_codes:
+            missing = ', '.join(sorted(codes - source_codes))
+            raise ValueError(f"Page {p['name']}: add {missing} to source iOS version "
+                             f"{spec['sourceVersion']} localizations first. Apple rejects custom-page "
+                             'locales absent from that version, even when the App Store supports them.')
     remote_pages = asc.get_all(f'/v1/apps/{app_id}/appCustomProductPages?limit=200')
     if len(remote_pages) + sum(not any(r['attributes']['name'] == p['name'] for r in remote_pages) for p in spec['pages']) > 70:
         raise ValueError('The plan exceeds the custom product page limit.')
