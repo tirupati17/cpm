@@ -204,10 +204,20 @@ def main(argv=None):
                     if f['name'] not in kept:
                         screenshots.upload(asc, sid, f['path'], asc._context)
                         print(f"  {code}: uploaded {f['name']}", flush=True)
-                shots = asc.get_all(shots_path); by_name = {s['attributes']['fileName']: s for s in shots}
-                ordered = [by_name[f['name']] for f in target['files']]
-                if len(shots) != len(ordered): raise ValueError('Unexpected screenshots after upload.')
-                prefix_length(ordered, target['files'], allow_processing=True)
+                # PATCH uploaded=true can return before GET exposes its state.
+                # Re-read briefly; keep checksum checks strict and never reupload
+                # a reservation merely because the read path is lagging.
+                for attempt in range(5):
+                    shots = asc.get_all(shots_path); by_name = {s['attributes']['fileName']: s for s in shots}
+                    ordered = [by_name[f['name']] for f in target['files']]
+                    if len(shots) != len(ordered): raise ValueError('Unexpected screenshots after upload.')
+                    try:
+                        prefix_length(ordered, target['files'], allow_processing=True)
+                        break
+                    except ValueError:
+                        if attempt == 4 or any(s['attributes'].get('assetDeliveryState', {}).get('state') == 'FAILED' for s in shots):
+                            raise
+                        time.sleep(2)
                 if [s['id'] for s in shots] != [s['id'] for s in ordered]:
                     asc.call('PATCH', f'/v1/appScreenshotSets/{sid}/relationships/appScreenshots', {
                         'data': [{'type': 'appScreenshots', 'id': s['id']} for s in ordered]})

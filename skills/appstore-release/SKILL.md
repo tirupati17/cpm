@@ -39,6 +39,7 @@ cpm appstore submit --version 1.2.3 --build 42          # inspect an existing re
 cpm appstore submit --version 1.2.3 --build 42 --commit # submit it without rebuilding or replacing assets
 cpm appstore experiment --spec round.json [--out result.json] [--commit] # create/resume a draft screenshot test
 cpm appstore product-pages --spec pages.json --out result.json [--commit] # localized campaign page drafts
+cpm appstore page-artwork --spec artwork.json --out artwork-result.json [--commit] # draft CPP header/search and inherited previews
 cpm appstore prices --spec ladder.json [--out ios.json] [--markdown table.md] [--commit]   # reprice from a spec
 ```
 
@@ -160,6 +161,29 @@ only distinct, proven inherited copies can be replaced. Matching assets are
 reused and screenshot order is explicitly restored after additions. The result
 records URLs, IDs, localized text, processing states and checksums. A report
 with `allAssetsVerified: false` is pending, not a successful asset verification.
+
+**A black summary thumbnail does not prove the entire page is black.** The
+template copies screenshot sets for other device sizes, preview videos, and
+header/search creative placements too. `product-pages` replaces only the
+explicit screenshot sets in its spec. Inspect every copied set and the locale's
+`placements` relationship. The default medium Dynamic Island iPhone tab is
+`APP_IPHONE_61` (1206x2622 or 1179x2556); it can display inherited light images
+while the large `APP_IPHONE_67` set is black. Replace the medium set and any
+inherited 6.5-inch, Duo or iPad sets when making a consistent theme page.
+
+Use `page-artwork` for existing CPP drafts. Its JSON specifies `appId`,
+`versionId` (the CPP version), `localeId`, `sourceLocaleId`, and `creatives`:
+`[{"placementType":"PRODUCT_PAGE_HEADER_ASSET","file":"header.png"},
+{"placementType":"APP_STORE_SEARCH_RESULTS_ASSET","file":"search.png"}]`.
+This command accepts 3840x1646 headers and 3840x2560 search PNGs. Set
+`removeInheritedPreviews: true` to remove copied videos from this draft.
+Run the dry run before `--commit`. It uploads to Asset Library, then replaces
+only this draft's proven inherited placements; shared library images and live
+placements are retained. It refuses unknown custom artwork, restores an old
+placement if replacement fails, verifies image references and reads the source
+placements back. A processing timeout is resumable; do not upload duplicates.
+Library images have no source checksum field: the report records local SHA-256,
+uploaded image IDs and Apple processing state, not a remote checksum claim.
 
 Pages require Apple review before becoming usable destinations. Keep pages
 showing an upcoming feature as drafts until that version is live. Creating a
