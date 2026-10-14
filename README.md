@@ -18,7 +18,8 @@ billing and push services a mobile app runs on.
 
 ## How it is made
 
-Bash scripts, git hooks and Markdown files for the memory. Python (standard library
+Bash scripts, git hooks and Markdown files for the memory; Python 3 for portable
+hook installation and skill copies. Python (standard library
 where possible) for the toolkit. No server, no database, no account. Everything is
 plain files in your own workspace. Credentials stay in `~/.config/cpm/<project>/`,
 never in a repo.
@@ -78,7 +79,7 @@ already read, and points the others at it:
 | Anything else | tell it to read `AGENTS.md` | `skills/INDEX.md` |
 
 `skills/INDEX.md` lists every skill in one line with when to use it, so an agent
-without skill support can still find and open the right `SKILL.md`. To link skills
+without skill support can still find and open the right `SKILL.md`. To install real skill folders
 into another folder, set `CPM_SKILL_DIRS` (for example
 `CPM_SKILL_DIRS=".agents/skills .my-agent/skills"`).
 
@@ -109,3 +110,31 @@ other developers can use it too. Issues and pull requests are welcome.
 ## Licence
 
 MIT. See [LICENSE](LICENSE).
+
+## Grouped workspaces and cloud sessions
+
+Keep repositories as independent real checkouts in `repos/`, or at the workspace
+root. A `.cpm-repos` registry maps stable memory IDs to folder locations:
+
+```text
+# ID<TAB>path<TAB>clone URL<TAB>branch
+my-app	repos/my-app	https://github.com/example/my-app.git	main
+```
+
+The separators are literal tabs. Set `.cpm-project` to your existing credential
+project name before renaming a workspace. Then use:
+
+```bash
+python3 toolkit/bin/cpm workspace repos list
+python3 toolkit/bin/cpm workspace repos clone           # dry run
+python3 toolkit/bin/cpm workspace repos clone --commit  # clone missing checkouts
+python3 toolkit/bin/cpm workspace repos check
+```
+
+Clone uses Git authentication provided by the environment. It leaves existing
+branches and unfinished work untouched, and refuses occupied or conflicting paths.
+No app sources, secrets or nested Git metadata are committed to the parent workspace.
+Run the hook installer after setup; hooks discover their ancestor workspace and
+continue working when the entire workspace moves. `scripts/link-skills.sh` now
+installs managed real copies, replacing old CPM links while preserving custom
+agent skills. Edit `skills/` and run the sync command again to refresh copies.

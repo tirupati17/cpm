@@ -74,3 +74,11 @@ logic gets a test in `toolkit/tests/`. Plain JSON REST APIs go through
 ```bash
 cd toolkit && python3 -m unittest discover -s tests
 ```
+
+### Workspace checkouts
+
+`cpm workspace repos list|check|clone` reads the workspace `.cpm-repos` registry.
+Use `clone --commit` to populate missing real Git folders; existing work is preserved.
+`--only <project-id> ...` selects specific repos, `--root` finds another workspace,
+and `--json` returns machine-readable status. Private URLs use the environment's
+Git authentication. The registry contains no tokens.

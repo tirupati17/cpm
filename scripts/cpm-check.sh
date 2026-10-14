@@ -62,8 +62,8 @@ ACTIONS=0
 
 # Auto-install hooks on new repos
 for project in "${CPM_PROJECTS[@]}"; do
-  hook_file="$WORKSPACE/$project/.git/hooks/post-commit"
-  if [ ! -f "$hook_file" ] || ! grep -q "\[cpm\]" "$hook_file" 2>/dev/null; then
+  hook_file="$(cpm_git_dir "$project")/hooks/post-commit"
+  if [ ! -f "$hook_file" ] || ! grep -q "portable v2" "$hook_file" 2>/dev/null; then
     "$WORKSPACE/scripts/install-hooks.sh" >/dev/null 2>&1
     ACTIONS=$((ACTIONS + 1))
     break
@@ -75,7 +75,7 @@ for project in "${CPM_PROJECTS[@]}"; do
   changelog_dir="$WORKSPACE/memory/changelogs/$project"
   mkdir -p "$changelog_dir"
   count=$(find "$changelog_dir" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
-  if [ "$count" -eq 0 ] && [ -d "$WORKSPACE/$project/.git" ]; then
+  if [ "$count" -eq 0 ] && [ -e "$(cpm_repo_dir "$project")/.git" ]; then
     "$WORKSPACE/scripts/backfill.sh" "$project" 30 >/dev/null 2>&1
     ACTIONS=$((ACTIONS + 1))
   fi
@@ -146,7 +146,7 @@ if [ "$IS_FIRST_RUN" = true ]; then
   echo -e "  ${CYAN}Auto-setup complete:${NC}"
 
   for project in "${CPM_PROJECTS[@]}"; do
-    branch=$(cd "$WORKSPACE/$project" && git branch --show-current 2>/dev/null || echo "detached")
+    branch=$(cd "$(cpm_repo_dir "$project")" && git branch --show-current 2>/dev/null || echo "detached")
     echo -e "    ${GREEN}+${NC} ${BOLD}$project${NC} — branch: $branch, hooks installed"
   done
 
@@ -174,9 +174,9 @@ if [ "$IS_NEW_DAY" = true ]; then
   echo -e "${DIM}────────────────────────────────────────${NC}"
 
   for project in "${CPM_PROJECTS[@]}"; do
-    branch=$(cd "$WORKSPACE/$project" && git branch --show-current 2>/dev/null || echo "detached")
-    last=$(cd "$WORKSPACE/$project" && git log -1 --format='%h %s' 2>/dev/null || echo "no commits")
-    today_count=$(cd "$WORKSPACE/$project" && git log --since="$TODAY" --oneline 2>/dev/null | wc -l | tr -d ' ')
+    branch=$(cd "$(cpm_repo_dir "$project")" && git branch --show-current 2>/dev/null || echo "detached")
+    last=$(cd "$(cpm_repo_dir "$project")" && git log -1 --format='%h %s' 2>/dev/null || echo "no commits")
+    today_count=$(cd "$(cpm_repo_dir "$project")" && git log --since="$TODAY" --oneline 2>/dev/null | wc -l | tr -d ' ')
 
     echo -e "  ${BOLD}$project${NC}  ${DIM}($branch)${NC}"
     echo -e "    Last: ${last}"
@@ -190,7 +190,7 @@ if [ "$IS_NEW_DAY" = true ]; then
   alerts=0
 
   for project in "${CPM_PROJECTS[@]}"; do
-    dirty=$(cd "$WORKSPACE/$project" && git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+    dirty=$(cd "$(cpm_repo_dir "$project")" && git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
     if [ "$dirty" -gt 0 ]; then
       echo -e "  ${YELLOW}!${NC} $project has $dirty uncommitted changes"
       alerts=$((alerts + 1))
@@ -207,8 +207,8 @@ if [ "$IS_NEW_DAY" = true ]; then
   fi
 
   for project in "${CPM_PROJECTS[@]}"; do
-    hook_file="$WORKSPACE/$project/.git/hooks/post-commit"
-    if [ ! -f "$hook_file" ] || ! grep -q "\[cpm\]" "$hook_file" 2>/dev/null; then
+    hook_file="$(cpm_git_dir "$project")/hooks/post-commit"
+    if [ ! -f "$hook_file" ] || ! grep -q "portable v2" "$hook_file" 2>/dev/null; then
       echo -e "  ${RED}!${NC} $project missing post-commit hook"
       alerts=$((alerts + 1))
     fi

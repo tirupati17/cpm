@@ -53,8 +53,8 @@ R+="${SEP}"$'\n'
 R+=""$'\n'
 
 for project in "${CPM_PROJECTS[@]}"; do
-  repo_dir="$WORKSPACE/$project"
-  [ -d "$repo_dir/.git" ] || continue
+  repo_dir="$(cpm_repo_dir "$project")"
+  [ -e "$repo_dir/.git" ] || continue
 
   branch=$(cd "$repo_dir" && git branch --show-current 2>/dev/null || echo "detached")
   platform="unknown"
@@ -197,8 +197,8 @@ R+=""$'\n'
 suggestions_found=0
 
 for project in "${CPM_PROJECTS[@]}"; do
-  repo_dir="$WORKSPACE/$project"
-  [ -d "$repo_dir/.git" ] || continue
+  repo_dir="$(cpm_repo_dir "$project")"
+  [ -e "$repo_dir/.git" ] || continue
 
   last_epoch=$(cd "$repo_dir" && git log -1 --format='%ct' 2>/dev/null || echo "0")
   now_epoch=$(date +%s)
@@ -285,8 +285,8 @@ if [ -f "$INSTALL_CONF" ]; then
 fi
 
 for project in "${CPM_PROJECTS[@]}"; do
-  repo_dir="$WORKSPACE/$project"
-  [ -d "$repo_dir/.git" ] || continue
+  repo_dir="$(cpm_repo_dir "$project")"
+  [ -e "$repo_dir/.git" ] || continue
 
   case "$project" in
     *android*)

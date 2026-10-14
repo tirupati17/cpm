@@ -7,14 +7,15 @@
 set -euo pipefail
 
 WORKSPACE="$(cd "$(dirname "$0")/.." && pwd)"
+source "$WORKSPACE/scripts/detect-projects.sh"
 
 backfill_one() {
   local project="$1"
   local count="${2:-20}"
-  local repo_dir="$WORKSPACE/$project"
+  local repo_dir="$(cpm_repo_dir "$project")"
   local changelog_dir="$WORKSPACE/memory/changelogs/$project"
 
-  if [ ! -d "$repo_dir/.git" ]; then
+  if [ ! -e "$repo_dir/.git" ]; then
     echo "[backfill] $project is not a git repo, skipping."
     return
   fi

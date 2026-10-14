@@ -95,7 +95,7 @@ else
 fi
 
 for project in "${CPM_PROJECTS[@]}"; do
-  [ -d "$WORKSPACE/$project/.git" ] && pass "$project is a valid git repo" || fail "$project is not a git repo"
+  [ -e "$(cpm_repo_dir "$project")/.git" ] && pass "$project is a valid git repo" || fail "$project is not a git repo"
 done
 
 for skip_dir in scripts docs claude-review-bot memory others; do
@@ -139,7 +139,7 @@ section "6. Git Hooks"
 # ──────────────────────────────────────────────────────────────
 
 for project in "${CPM_PROJECTS[@]}"; do
-  hook_file="$WORKSPACE/$project/.git/hooks/post-commit"
+  hook_file="$(cpm_git_dir "$project")/hooks/post-commit"
   if [ -f "$hook_file" ] && grep -q "\[cpm\]" "$hook_file" 2>/dev/null; then
     pass "$project — post-commit hook installed"
     grep -q "log-commit.sh" "$hook_file" && pass "$project — hook calls log-commit.sh" || fail "$project — hook missing log-commit.sh"

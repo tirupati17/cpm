@@ -54,8 +54,8 @@ cat >> "$TRUTH" << 'SECTION'
 SECTION
 
 for project in "${PROJECTS[@]}"; do
-  repo_dir="$WORKSPACE/$project"
-  if [ -d "$repo_dir/.git" ]; then
+  repo_dir="$(cpm_repo_dir "$project")"
+  if [ -e "$repo_dir/.git" ]; then
     branch=$(cd "$repo_dir" && git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")
     last_commit=$(cd "$repo_dir" && git log -1 --date=short --format="%ad: %s" 2>/dev/null || echo "?")
     cl_count=$(ls "$WORKSPACE/memory/changelogs/$project"/*.md 2>/dev/null | wc -l | tr -d ' ')

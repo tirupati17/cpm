@@ -106,7 +106,7 @@ source "$WORKSPACE/scripts/detect-projects.sh"
 if [ ${#CPM_PROJECTS[@]} -gt 0 ]; then
   echo -e "  ${DIM}Already in workspace:${NC}"
   for repo in "${CPM_PROJECTS[@]}"; do
-    branch=$(cd "$WORKSPACE/$repo" && git branch --show-current 2>/dev/null || echo "detached")
+    branch=$(cd "$(cpm_repo_dir "$repo")" && git branch --show-current 2>/dev/null || echo "detached")
     echo -e "    ${GREEN}+${NC} $repo ($branch)"
   done
   echo ""
@@ -118,12 +118,17 @@ echo -e "  ${DIM}Example: git@github.com:your-org/your-android-repo.git${NC}"
 echo ""
 
 CLONE_URLS=()
+if [ -f "$WORKSPACE/.cpm-repos" ]; then
+  echo "  Repositories are registered in .cpm-repos; use toolkit/bin/cpm workspace repos clone --commit."
+else
 while true; do
   printf "  Repo URL: "
   read -r url
   [ -z "$url" ] && break
   CLONE_URLS+=("$url")
 done
+
+fi
 
 CLONED=()
 if [ ${#CLONE_URLS[@]} -gt 0 ]; then
@@ -202,7 +207,7 @@ echo -e "  ${DIM}Running verification...${NC}"
 VERIFY_PASS=true
 
 for repo in "${CPM_PROJECTS[@]}"; do
-  hook="$WORKSPACE/$repo/.git/hooks/post-commit"
+  hook="$(cpm_git_dir "$repo")/hooks/post-commit"
   if [ -f "$hook" ] && grep -q "\[cpm\]" "$hook" 2>/dev/null; then
     echo -e "    ${GREEN}+${NC} $repo: hooks installed"
   else

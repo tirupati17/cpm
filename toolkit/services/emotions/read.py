@@ -42,6 +42,7 @@ import sys
 from pathlib import Path
 
 from cpmkit import creds, http
+from cpmkit.workspace import resolve_repo
 
 
 def setting(name):
@@ -273,8 +274,7 @@ def main():
     if not a.repo:
         ap.error("repo is required unless --tag or --tags is given")
 
-    repo = Path(a.repo).expanduser().resolve()
-    a.repo = repo.name
+    repo, a.repo = resolve_repo(a.repo)
     if a.range:
         rng = a.range
     else:

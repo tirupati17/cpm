@@ -6,6 +6,7 @@ set -eu
 # Note: no pipefail — `head -N` after sorts triggers SIGPIPE in upstream sort/uniq
 
 WORKSPACE="$(cd "$(dirname "$0")/.." && pwd)"
+source "$WORKSPACE/scripts/detect-projects.sh"
 SUMMARY_DIR="$WORKSPACE/memory/summaries"
 CHANGELOG_BASE="$WORKSPACE/memory/changelogs"
 
@@ -15,7 +16,7 @@ summarize_project() {
   local project="$1"
   local cl_dir="$CHANGELOG_BASE/$project"
   local out="$SUMMARY_DIR/$project.md"
-  local repo_dir="$WORKSPACE/$project"
+  local repo_dir="$(cpm_repo_dir "$project")"
 
   if [ ! -d "$cl_dir" ] || [ -z "$(ls -A "$cl_dir" 2>/dev/null)" ]; then
     echo "[summarize] No changelogs for $project, skipping."
@@ -23,7 +24,7 @@ summarize_project() {
   fi
 
   local branch="unknown" commit_count=0
-  if [ -d "$repo_dir/.git" ]; then
+  if [ -e "$repo_dir/.git" ]; then
     branch=$(cd "$repo_dir" && git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
     commit_count=$(cd "$repo_dir" && git rev-list --count HEAD 2>/dev/null || echo 0)
   fi
